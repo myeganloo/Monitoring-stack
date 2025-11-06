@@ -60,15 +60,15 @@ deploy:production:
         echo '⚙️ Installing required packages...' &&
         if ! command -v envsubst > /dev/null; then apt-get update && apt-get install -y gettext-base; fi &&
         echo '🔧 Updating environment variables from GitLab...' &&
-        export VM_IP='$PRODUCTION_VM_IP' &&
-        export DOMAIN_ADDRESS='$PRODUCTION_DOMAIN' &&
-        export HOSTNAME='$PRODUCTION_HOST' &&
-        export GRAFANA_USERNAME='$SECURE_GRAFANA_USERNAME' &&
-        export GRAFANA_PASSWORD='$SECURE_GRAFANA_PASSWORD' &&
-        export ACME_EMAIL='$SECURE_ACME_EMAIL' &&
-        export WEB_AUTH_USER='$WEB_AUTH_USER' &&
-        export WEB_AUTH_PASS='$WEB_AUTH_PASS' &&
-        export SLACK_WEBHOOK_URL='$SECURE_SLACK_WEBHOOK_URL' &&
+        export VM_IP=\"\$PRODUCTION_VM_IP\" &&
+        export DOMAIN_ADDRESS=\"\$PRODUCTION_DOMAIN\" &&
+        export HOSTNAME=\"\$PRODUCTION_HOST\" &&
+        export GRAFANA_USERNAME=\"\$SECURE_GRAFANA_USERNAME\" &&
+        export GRAFANA_PASSWORD=\"\$SECURE_GRAFANA_PASSWORD\" &&
+        export ACME_EMAIL=\"\$SECURE_ACME_EMAIL\" &&
+        export WEB_AUTH_USER=\"\$WEB_AUTH_USER\" &&
+        export WEB_AUTH_PASS=\"\$WEB_AUTH_PASS\" &&
+        export SLACK_WEBHOOK_URL=\"\$SECURE_SLACK_WEBHOOK_URL\" &&
         
         echo '📝 Generating environment file...' &&
         envsubst < .env.example > .env &&
