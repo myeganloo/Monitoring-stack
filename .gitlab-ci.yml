@@ -62,19 +62,32 @@ deploy:production:
         echo \"PRODUCTION_VM_IP = \$PRODUCTION_VM_IP\" &&
         echo \"PRODUCTION_DOMAIN = \$PRODUCTION_DOMAIN\" &&
         echo \"PRODUCTION_HOST = \$PRODUCTION_HOST\" &&
+        
+        echo 'Setting fallback values for empty variables...' &&
+        VM_IP_VALUE=\${PRODUCTION_VM_IP:-192.168.80.25} &&
+        DOMAIN_VALUE=\${PRODUCTION_DOMAIN:-monlog.erahyar.com} &&
+        HOST_VALUE=\${PRODUCTION_HOST:-observability-production} &&
+        
+        echo \"Using values: VM_IP=\$VM_IP_VALUE, DOMAIN=\$DOMAIN_VALUE, HOST=\$HOST_VALUE\" &&
+        
         cp .env.example .env &&
-        echo 'Original .env.example content:' &&
-        head -10 .env.example &&
         echo 'Starting sed replacements...' &&
-        sed -i \"s|\\\${\VM_IP:-.*}|\$PRODUCTION_VM_IP|g\" .env &&
-        sed -i \"s|\\\${\DOMAIN_ADDRESS:-.*}|\$PRODUCTION_DOMAIN|g\" .env &&
-        sed -i \"s|\\\${\HOSTNAME:-.*}|\$PRODUCTION_HOST|g\" .env &&
-        sed -i \"s|\\\${\GRAFANA_USERNAME:-.*}|\$SECURE_GRAFANA_USERNAME|g\" .env &&
-        sed -i \"s|\\\${\GRAFANA_PASSWORD:-.*}|\$SECURE_GRAFANA_PASSWORD|g\" .env &&
-        sed -i \"s|\\\${\ACME_EMAIL:-.*}|\$SECURE_ACME_EMAIL|g\" .env &&
-        sed -i \"s|\\\${\WEB_AUTH_USER:-.*}|\$WEB_AUTH_USER|g\" .env &&
-        sed -i \"s|\\\${\WEB_AUTH_PASS:-.*}|\$WEB_AUTH_PASS|g\" .env &&
-        sed -i \"s|\\\${\SLACK_WEBHOOK_URL:-.*}|\$SECURE_SLACK_WEBHOOK_URL|g\" .env &&
+        sed -i \"s|\\\${\VM_IP:-.*}|\$VM_IP_VALUE|g\" .env &&
+        sed -i \"s|\\\${\DOMAIN_ADDRESS:-.*}|\$DOMAIN_VALUE|g\" .env &&
+        sed -i \"s|\\\${\HOSTNAME:-.*}|\$HOST_VALUE|g\" .env &&
+        GRAFANA_USER_VALUE=\${SECURE_GRAFANA_USERNAME:-admin} &&
+        GRAFANA_PASS_VALUE=\${SECURE_GRAFANA_PASSWORD:-secure_password_here} &&
+        ACME_EMAIL_VALUE=\${SECURE_ACME_EMAIL:-admin@erahyar.com} &&
+        WEB_USER_VALUE=\${WEB_AUTH_USER:-admin} &&
+        WEB_PASS_VALUE=\${WEB_AUTH_PASS:-{SHA}hashed_password_here} &&
+        SLACK_URL_VALUE=\${SECURE_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/YOUR/WEBHOOK/URL} &&
+        
+        sed -i \"s|\\\${\GRAFANA_USERNAME:-.*}|\$GRAFANA_USER_VALUE|g\" .env &&
+        sed -i \"s|\\\${\GRAFANA_PASSWORD:-.*}|\$GRAFANA_PASS_VALUE|g\" .env &&
+        sed -i \"s|\\\${\ACME_EMAIL:-.*}|\$ACME_EMAIL_VALUE|g\" .env &&
+        sed -i \"s|\\\${\WEB_AUTH_USER:-.*}|\$WEB_USER_VALUE|g\" .env &&
+        sed -i \"s|\\\${\WEB_AUTH_PASS:-.*}|\$WEB_PASS_VALUE|g\" .env &&
+        sed -i \"s|\\\${\SLACK_WEBHOOK_URL:-.*}|\$SLACK_URL_VALUE|g\" .env &&
         echo 'Modified .env content:' &&
         head -10 .env &&
         echo '🐳 Restarting monitoring stack...' &&
