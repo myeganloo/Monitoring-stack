@@ -40,13 +40,29 @@ deploy:production:
     - ssh-keyscan -p 8090 -H $PRODUCTION_VM_IP >> ~/.ssh/known_hosts || echo "StrictHostKeyChecking no" >> ~/.ssh/config
     - |
       ssh -p 8090 root@$PRODUCTION_VM_IP << 'EOF'
-        echo "📁 Going to monitoring directory..."
-        cd /opt/monitoring/observability/observability-full-stack
+        echo "📁 Setting up monitoring directory..."
+        mkdir -p /opt/monitoring
+        cd /opt/monitoring
         
-        echo "🔄 Pulling latest code..."
-        git pull origin main
+        echo "🔍 Checking if git repo exists..."
+        if [ ! -d ".git" ]; then
+          echo "📥 Cloning repository..."
+          git clone https://gitlab.com/rahyar/monitoring.git .
+        else
+          echo "🔄 Pulling latest code..."
+          git pull origin main
+        fi
+        
+        echo "📁 Going to observability stack directory..."
+        cd observability/observability-full-stack
         
         echo "⚙️ Updating environment variables from GitLab..."
+        # Install envsubst if not available
+        if ! command -v envsubst &> /dev/null; then
+          echo "📦 Installing gettext-base for envsubst..."
+          apt-get update && apt-get install -y gettext-base
+        fi
+        
         # Export GitLab variables for envsubst
         export VM_IP="${PRODUCTION_VM_IP}"
         export DOMAIN_ADDRESS="${PRODUCTION_DOMAIN}"
@@ -60,6 +76,18 @@ deploy:production:
         
         # Generate .env with GitLab variables
         envsubst < .env.example > .env
+        
+        echo "🐳 Checking Docker and Docker Compose..."
+        if ! command -v docker &> /dev/null; then
+          echo "❌ Docker not installed. Please install Docker first!"
+          exit 1
+        fi
+        
+        if ! command -v docker-compose &> /dev/null; then
+          echo "📦 Installing Docker Compose..."
+          curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+        fi
         
         echo "🐳 Restarting containers..."
         docker-compose down
