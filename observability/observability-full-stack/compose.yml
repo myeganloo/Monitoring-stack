@@ -201,15 +201,4 @@ services:
     networks:
       - app_net
 
-  k6-tracing:
-    image: ghcr.io/grafana/xk6-client-tracing:${K6_TARCING_TAG}
-    container_name: k6-tracing
-    hostname: k6-tracing
-    restart: ${RESTART_POLICY}
-    environment:
-      - ENDPOINT=tempo:4317
-    depends_on:
-      - tempo
-    networks:
-      - app_net
-     
+  
