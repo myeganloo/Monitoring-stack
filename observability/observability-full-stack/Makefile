@@ -73,3 +73,42 @@ clean:
 status:
 	@echo "📊 Observability Stack Status:"
 	@docker-compose ps
+
+# Deployment helpers
+deploy-staging:
+	@echo "🚀 Deploying to staging environment..."
+	@if [ ! -f .env.staging ]; then echo "❌ .env.staging not found"; exit 1; fi
+	@cp .env.staging .env
+	@./generate-traefik-config.sh
+	@make down || true
+	@make up PROFILE=observability
+	@echo "✅ Staging deployment completed"
+
+deploy-production:
+	@echo "🚀 Deploying to production environment..."
+	@if [ ! -f .env.production ]; then echo "❌ .env.production not found"; exit 1; fi
+	@cp .env.production .env
+	@./generate-traefik-config.sh
+	@echo "Creating backup..."
+	@mkdir -p backup/$(shell date +%Y%m%d_%H%M%S)
+	@docker-compose ps > backup/$(shell date +%Y%m%d_%H%M%S)/services-before-deploy.txt || true
+	@make down
+	@sleep 10
+	@make up PROFILE=observability
+	@sleep 30
+	@echo "🔍 Running health checks..."
+	@curl -f http://$(VM_IP):9090/-/healthy || echo "⚠️ Prometheus health check failed"
+	@curl -f http://$(VM_IP):3000/api/health || echo "⚠️ Grafana health check failed"
+	@echo "✅ Production deployment completed"
+
+# Health check
+health:
+	@echo "🔍 Running health checks..."
+	@echo "Prometheus: " && curl -s -o /dev/null -w "%{http_code}" http://$(VM_IP):9090/-/healthy || echo "Failed"
+	@echo "Grafana: " && curl -s -o /dev/null -w "%{http_code}" http://$(VM_IP):3000/api/health || echo "Failed"
+	@echo "Alertmanager: " && curl -s -o /dev/null -w "%{http_code}" http://$(VM_IP):9093/-/healthy || echo "Failed"
+
+# Setup GitLab CI
+setup-ci:
+	@echo "🔧 Setting up GitLab CI/CD..."
+	@cd ../../ && ./setup-gitlab-ci.sh

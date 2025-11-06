@@ -15,17 +15,27 @@ route:
 
 receivers:
 - name: 'Production_Environment'
-  telegram_configs:
-  - bot_token: '<YOUR TELEGRAM BOT TOKEN>
-    api_url: "https://api.telegram.org"
-    chat_id: <YOUR TELEGRAM CHAT ID>
-    parse_mode: ""
+  slack_configs:
+  - api_url: '${SLACK_WEBHOOK_URL}'
+    channel: '${SLACK_CHANNEL}'
+    username: 'AlertManager-Monitoring'
+    icon_emoji: ':rotating_light:'
+    title: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+    text: |
+      {{ range .Alerts }}
+      *Alert:* {{ .Annotations.summary }}
+      *Description:* {{ .Annotations.description }}
+      *Severity:* {{ .Labels.severity }}
+      *Instance:* {{ .Labels.instance }}
+      {{ end }}
     send_resolved: true
-    disable_notifications: false
-    http_config:
-      proxy_url: '<YOUR HTTP PROXY FOR SENT TELEGRAM MESSAGE>'
-      follow_redirects: true
-      enable_http2: true
+    actions:
+    - type: button
+      text: 'View in Grafana'
+      url: 'http://${VM_IP}:3000'
+    - type: button
+      text: 'View in Prometheus'
+      url: 'http://${VM_IP}:9090'
   email_configs:
     - send_resolved: true
       to: '<YOUR RECIVER MAINBOX>'

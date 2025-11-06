@@ -75,6 +75,10 @@ services:
     image: prom/alertmanager:${ALERTMANAGER_TAG}
     restart: ${RESTART_POLICY}
     container_name: alertmanager
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - SLACK_CHANNEL=${SLACK_CHANNEL}
+      - VM_IP=${VM_IP}
     volumes:
       - alertmanager_data:/alertmanager
       - ./alertmanager:/etc/alertmanager
