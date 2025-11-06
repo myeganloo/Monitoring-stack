@@ -1,0 +1,166 @@
+# Traefik Configuration for Observability Stack Services
+# This file can be used as a dynamic configuration file for your external Traefik instance
+# Place this file in your Traefik's dynamic configuration directory or include it in your main traefik.yml
+#
+# Updated for VM deployment:
+# - VM IP: 192.168.80.25
+# - Domain: monlog.erahyar.com
+# - Services accessible via IP:PORT or domain routing
+# - Basic auth configured with existing credentials
+
+# HTTP routers and services
+http:
+  routers:
+    # Prometheus
+    prometheus:
+      entryPoints:
+        - "http"
+      rule: "Host(`metrics.monlog.erahyar.com`)"
+      middlewares:
+        - "https-redirect"
+      service: "prometheus"
+
+    prometheus-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`metrics.monlog.erahyar.com`)"
+      middlewares:
+        - "web-auth"
+      service: "prometheus"
+      tls:
+        certResolver: "mycert"
+
+    # Grafana
+    grafana:
+      entryPoints:
+        - "http"
+      rule: "Host(`grafana.monlog.erahyar.com`)"
+      middlewares:
+        - "https-redirect"
+      service: "grafana"
+
+    grafana-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`grafana.monlog.erahyar.com`)"
+      service: "grafana"
+      tls:
+        certResolver: "mycert"
+
+    # Alertmanager
+    alertmanager:
+      entryPoints:
+        - "http"
+      rule: "Host(`alerts.monlog.erahyar.com`)"
+      middlewares:
+        - "https-redirect"
+      service: "alertmanager"
+
+    alertmanager-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`alerts.monlog.erahyar.com`)"
+      middlewares:
+        - "web-auth"
+      service: "alertmanager"
+      tls:
+        certResolver: "mycert"
+
+    # Pushgateway
+    pushgateway:
+      entryPoints:
+        - "http"
+      rule: "Host(`pushgw.monlog.erahyar.com`)"
+      middlewares:
+        - "https-redirect"
+      service: "pushgateway"
+
+    pushgateway-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`pushgw.monlog.erahyar.com`)"
+      middlewares:
+        - "web-auth"
+      service: "pushgateway"
+      tls:
+        certResolver: "mycert"
+
+    # Loki
+    loki:
+      entryPoints:
+        - "http"
+      rule: "Host(`loki.monlog.erahyar.com`)"
+      middlewares:
+        - "https-redirect"
+      service: "loki"
+
+    loki-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`loki.monlog.erahyar.com`)"
+      middlewares:
+        - "web-auth"
+      service: "loki"
+      tls:
+        certResolver: "mycert"
+
+  services:
+    # Prometheus service
+    prometheus:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.80.25:9090"
+
+    # Grafana service
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.80.25:3000"
+
+    # Alertmanager service
+    alertmanager:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.80.25:9093"
+
+    # Pushgateway service
+    pushgateway:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.80.25:9091"
+
+    # Loki service
+    loki:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.80.25:3100"
+
+  middlewares:
+    # HTTPS redirect middleware
+    https-redirect:
+      redirectScheme:
+        scheme: "https"
+        permanent: true
+
+    # Basic auth middleware
+    web-auth:
+      basicAuth:
+        users:
+          - "erahyarmon:{SHA}Ne0GBlaxUeH02aZ1+MabHvXMBv4=" # From your .env file
+
+# TLS configuration
+tls:
+  options:
+    default:
+      sslProtocols:
+        - "TLSv1.2"
+        - "TLSv1.3"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+      minVersion: "VersionTLS12"

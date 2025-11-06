@@ -1,0 +1,76 @@
+# Traefik Labels for Observability Stack
+# If your external Traefik instance uses Docker provider,
+# you can add these labels to your services in the compose file
+
+# For Prometheus service:
+traefik.enable=true
+traefik.docker.network=web_net
+traefik.http.routers.prometheus.entrypoints=http
+traefik.http.routers.prometheus.rule=Host(`metrics.${DOMAIN_ADDRESS}`)
+traefik.http.routers.prometheus.middlewares=https-redirect
+traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+traefik.http.routers.prometheus-secure.entrypoints=https
+traefik.http.routers.prometheus-secure.rule=Host(`metrics.${DOMAIN_ADDRESS}`)
+traefik.http.routers.prometheus-secure.tls=true
+traefik.http.routers.prometheus-secure.tls.options=default
+traefik.http.routers.prometheus-secure.middlewares=web-auth
+traefik.http.routers.prometheus-secure.tls.certresolver=mycert
+traefik.http.services.prometheus.loadbalancer.server.port=9090
+
+# For Grafana service:
+traefik.enable=true
+traefik.docker.network=web_net
+traefik.http.routers.grafana.entrypoints=http
+traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN_ADDRESS}`)
+traefik.http.routers.grafana.middlewares=https-redirect
+traefik.http.routers.grafana-secure.entrypoints=https
+traefik.http.routers.grafana-secure.rule=Host(`grafana.${DOMAIN_ADDRESS}`)
+traefik.http.routers.grafana-secure.tls=true
+traefik.http.routers.grafana-secure.tls.options=default
+traefik.http.routers.grafana-secure.tls.certresolver=mycert
+traefik.http.services.grafana.loadbalancer.server.port=3000
+
+# For Alertmanager service:
+traefik.enable=true
+traefik.docker.network=web_net
+traefik.http.routers.alert.entrypoints=http
+traefik.http.routers.alert.rule=Host(`alerts.${DOMAIN_ADDRESS}`)
+traefik.http.routers.alert.middlewares=https-redirect
+traefik.http.routers.alert-secure.entrypoints=https
+traefik.http.routers.alert-secure.rule=Host(`alerts.${DOMAIN_ADDRESS}`)
+traefik.http.routers.alert-secure.tls=true
+traefik.http.routers.alert-secure.tls.options=default
+traefik.http.routers.alert-secure.middlewares=web-auth
+traefik.http.routers.alert-secure.tls.certresolver=mycert
+traefik.http.services.alert.loadbalancer.server.port=9093
+
+# For Pushgateway service:
+traefik.enable=true
+traefik.docker.network=web_net
+traefik.http.routers.push.entrypoints=http
+traefik.http.routers.push.rule=Host(`pushgw.${DOMAIN_ADDRESS}`)
+traefik.http.routers.push.middlewares=https-redirect
+traefik.http.routers.push-secure.entrypoints=https
+traefik.http.routers.push-secure.rule=Host(`pushgw.${DOMAIN_ADDRESS}`)
+traefik.http.routers.push-secure.tls=true
+traefik.http.routers.push-secure.tls.options=default
+traefik.http.routers.push-secure.middlewares=web-auth
+traefik.http.routers.push-secure.tls.certresolver=mycert
+traefik.http.services.push.loadbalancer.server.port=9091
+
+# For Loki service:
+traefik.enable=true
+traefik.docker.network=web_net
+traefik.http.routers.loki.entrypoints=http
+traefik.http.routers.loki.rule=Host(`loki.${DOMAIN_ADDRESS}`)
+traefik.http.routers.loki.middlewares=https-redirect
+traefik.http.routers.loki-secure.entrypoints=https
+traefik.http.routers.loki-secure.rule=Host(`loki.${DOMAIN_ADDRESS}`)
+traefik.http.routers.loki-secure.tls=true
+traefik.http.routers.loki-secure.tls.options=default
+traefik.http.routers.loki-secure.middlewares=web-auth
+traefik.http.routers.loki-secure.tls.certresolver=mycert
+traefik.http.services.loki.loadbalancer.server.port=3100
+
+# Basic auth middleware (add this to your external Traefik):
+traefik.http.middlewares.web-auth.basicauth.users=${WEB_AUTH_USER}:${WEB_AUTH_PASS}

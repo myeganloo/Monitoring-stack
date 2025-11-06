@@ -1,0 +1,171 @@
+# Traefik Configuration Template for Observability Stack Services
+# This is a template file that uses environment variables
+# Process with: envsubst < traefik-config.template.yml > traefik-config.yml
+#
+# Required environment variables:
+# - VM_IP: The VM IP address (e.g., 192.168.80.25)
+# - DOMAIN_ADDRESS: The base domain (e.g., monlog.erahyar.com)
+# - WEB_AUTH_PASS: The hashed password for basic auth
+#
+# Usage: 
+# export VM_IP=192.168.80.25
+# export DOMAIN_ADDRESS=monlog.erahyar.com  
+# export WEB_AUTH_PASS="{SHA}Ne0GBlaxUeH02aZ1+MabHvXMBv4="
+# envsubst < traefik-config.template.yml > traefik-config.yml
+
+# HTTP routers and services
+http:
+  routers:
+    # Prometheus
+    prometheus:
+      entryPoints:
+        - "http"
+      rule: "Host(`metrics.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "https-redirect"
+      service: "prometheus"
+
+    prometheus-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`metrics.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "web-auth"
+      service: "prometheus"
+      tls:
+        certResolver: "mycert"
+
+    # Grafana
+    grafana:
+      entryPoints:
+        - "http"
+      rule: "Host(`grafana.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "https-redirect"
+      service: "grafana"
+
+    grafana-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`grafana.${DOMAIN_ADDRESS}`)"
+      service: "grafana"
+      tls:
+        certResolver: "mycert"
+
+    # Alertmanager
+    alertmanager:
+      entryPoints:
+        - "http"
+      rule: "Host(`alerts.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "https-redirect"
+      service: "alertmanager"
+
+    alertmanager-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`alerts.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "web-auth"
+      service: "alertmanager"
+      tls:
+        certResolver: "mycert"
+
+    # Pushgateway
+    pushgateway:
+      entryPoints:
+        - "http"
+      rule: "Host(`pushgw.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "https-redirect"
+      service: "pushgateway"
+
+    pushgateway-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`pushgw.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "web-auth"
+      service: "pushgateway"
+      tls:
+        certResolver: "mycert"
+
+    # Loki
+    loki:
+      entryPoints:
+        - "http"
+      rule: "Host(`loki.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "https-redirect"
+      service: "loki"
+
+    loki-secure:
+      entryPoints:
+        - "https"
+      rule: "Host(`loki.${DOMAIN_ADDRESS}`)"
+      middlewares:
+        - "web-auth"
+      service: "loki"
+      tls:
+        certResolver: "mycert"
+
+  services:
+    # Prometheus service
+    prometheus:
+      loadBalancer:
+        servers:
+          - url: "http://${VM_IP}:9090"
+
+    # Grafana service
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://${VM_IP}:3000"
+
+    # Alertmanager service
+    alertmanager:
+      loadBalancer:
+        servers:
+          - url: "http://${VM_IP}:9093"
+
+    # Pushgateway service
+    pushgateway:
+      loadBalancer:
+        servers:
+          - url: "http://${VM_IP}:9091"
+
+    # Loki service
+    loki:
+      loadBalancer:
+        servers:
+          - url: "http://${VM_IP}:3100"
+
+  middlewares:
+    # HTTPS redirect middleware
+    https-redirect:
+      redirectScheme:
+        scheme: "https"
+        permanent: true
+
+    # Basic auth middleware
+    web-auth:
+      basicAuth:
+        users:
+          - "erahyarmon:${WEB_AUTH_PASS}"
+
+# TLS configuration
+tls:
+  options:
+    default:
+      sslProtocols:
+        - "TLSv1.2"
+        - "TLSv1.3"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+      minVersion: "VersionTLS12"

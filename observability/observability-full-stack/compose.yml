@@ -1,0 +1,248 @@
+name: observability
+
+networks:
+  web_net:
+    external: true
+  app_net:
+    external: true
+
+volumes:
+  grafana_data:
+    name: grafana_data
+  prometheus_data:
+    name: prometheus_data
+  alertmanager_data:
+    name: alertmanager_data
+  pushgateway_data:
+    name: pushgateway_data
+  loki_data:
+    name: loki_data
+  tempo_data:
+    name: tempo_data
+
+services:
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_TAG}
+    restart: ${RESTART_POLICY}
+    container_name: prometeheus
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus:/etc/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=150GB
+      - --web.enable-lifecycle
+    ports:
+      - "${VM_IP}:9090:9090"
+    networks:
+      - web_net
+      - app_net
+    profiles:
+      - observability
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_TAG}
+    restart: ${RESTART_POLICY}
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/:/etc/grafana/provisioning/
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USERNAME}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=${GRAFANA_INSTALL_PLUGINS}
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_PATHS_DATA=/var/lib/grafana
+      - GF_USERS_DEFAULT_THEME=light
+      - GF_LOG_MODE=console
+      - GF_LOG_LEVEL=critical
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+    ports:
+      - "${VM_IP}:3000:3000"
+    networks:
+      - web_net
+      - app_net
+    profiles:
+      - monitoring
+      - logging
+      - visualizations
+      - observability
+
+  alertmanager:
+    image: prom/alertmanager:${ALERTMANAGER_TAG}
+    restart: ${RESTART_POLICY}
+    container_name: alertmanager
+    volumes:
+      - alertmanager_data:/alertmanager
+      - ./alertmanager:/etc/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "${VM_IP}:9093:9093"
+    networks:
+      - web_net
+      - app_net
+    profiles:
+      - monitoring
+      - alerting
+      - observability
+
+  pushgateway:
+    image: prom/pushgateway:${PUSHGATEWAY_TAG}
+    restart: ${RESTART_POLICY}
+    container_name: pushgateway
+    command:
+      - --persistence.file=/tmp/pushgateway.store
+      - --persistence.interval=1m
+    volumes:
+      - pushgateway_data:/tmp/
+    ports:
+      - "${VM_IP}:9091:9091"
+    networks:
+      - web_net
+      - app_net
+    profiles:
+      - monitoring
+      - observability
+
+  cadvisor:
+    image: docker.io/ahmadrafiee/cadvisor:${CADVISOR_TAG}
+    command: --disable_metrics=disk,udp,percpu
+    restart: ${RESTART_POLICY}
+    hostname: '${HOSTNAME}'
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - app_net
+    profiles:
+      - monitoring
+      - observability
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:${BLACKBOX_TAG}
+    restart: ${RESTART_POLICY}
+    hostname: '${HOSTNAME}'
+    container_name: blackbox-exporter
+    command:
+      - '--config.file=/etc/blackboxexporter/blackbox-exporter.yml'
+    volumes:
+      - ./blackbox:/etc/blackboxexporter
+    networks:
+      - app_net
+    profiles:
+      - observability
+      - monitoring
+
+  node-exporter:
+    image: prom/node-exporter:${NODE_EXPORTER_TAG}
+    restart: ${RESTART_POLICY}
+    hostname: '${HOSTNAME}'
+    container_name: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    networks:
+      - app_net
+    profiles:
+      - monitoring
+      - observability
+
+  loki:
+    image: grafana/loki:${LOKI_TAG}
+    command: -config.file=/etc/loki/loki.yml
+    restart: ${RESTART_POLICY}
+    container_name: loki
+    user: root
+    volumes:
+      - loki_data:/tmp/loki
+      - ./loki:/etc/loki/
+    ports:
+      - "${VM_IP}:3100:3100"
+    networks:
+      - web_net
+      - app_net
+    profiles:
+      - observability
+      - logging
+
+  promtail:
+    image: grafana/promtail:${PROMTAIL_TAG}
+    restart: ${RESTART_POLICY}
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./promtail:/etc/promtail/
+    command: -config.file=/etc/promtail/promtail.yml
+    networks:
+      - app_net
+    profiles:
+      - observability
+      - logging
+
+  memcached:
+    image: memcached:${MEMCACHED_TAG}
+    container_name: memcached
+    hostname: memcached
+    restart: ${RESTART_POLICY}
+    environment:
+      - MEMCACHED_MAX_MEMORY=64m  # Set the maximum memory usage
+      - MEMCACHED_THREADS=4       # Number of threads to use
+    networks:
+      - app_net
+    profiles:
+      - observability
+      - tracing
+
+  tempo:
+    image: grafana/tempo:${TEMPO_SUB}
+    container_name: tempo
+    hostname: tempo
+    restart: ${RESTART_POLICY}
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/var/tempo
+    ports:
+      - "${VM_IP}:14268:14268"   # jaeger ingest
+      - "${VM_IP}:3200:3200"     # tempo
+      - "${VM_IP}:9095:9095"     # tempo grpc
+      - "${VM_IP}:4317:4317"     # otlp grpc
+      - "${VM_IP}:4318:4318"     # otlp http
+      - "${VM_IP}:9411:9411"     # zipkin
+    networks:
+      - app_net
+    profiles:
+      - observability
+      - tracing
+
+  k6-tracing:
+    image: ghcr.io/grafana/xk6-client-tracing:${K6_TARCING_TAG}
+    container_name: k6-tracing
+    hostname: k6-tracing
+    restart: ${RESTART_POLICY}
+    environment:
+      - ENDPOINT=tempo:4317
+    depends_on:
+      - tempo
+    networks:
+      - app_net
+    profiles:
+      - tracing
+      - tracing-load
+      - observability
