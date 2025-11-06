@@ -77,8 +77,13 @@ deploy:production:
         GRAFANA_PASS_VALUE=\${SECURE_GRAFANA_PASSWORD:-secure_password_here} &&
         ACME_EMAIL_VALUE=\${SECURE_ACME_EMAIL:-admin@erahyar.com} &&
         WEB_USER_VALUE=\${WEB_AUTH_USER:-admin} &&
-        WEB_PASS_VALUE=\${WEB_AUTH_PASS:-\\\$2y\\\$10\\\$example.hash.here} &&
-        SLACK_URL_VALUE=\${SECURE_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/YOUR/WEBHOOK/URL} &&
+        WEB_PASS_VALUE=\${WEB_AUTH_PASS:-\\\$2y\\\$10\\\$defaulthash123456789012345678901} &&
+        SLACK_URL_VALUE=\${SECURE_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/DEFAULT/WEBHOOK/URL} &&
+        
+        echo \"Debug - Final values:\" &&
+        echo \"GRAFANA_USER=\$GRAFANA_USER_VALUE\" &&
+        echo \"ACME_EMAIL=\$ACME_EMAIL_VALUE\" &&
+        echo \"WEB_USER=\$WEB_USER_VALUE\" &&
         
         echo 'Replacing variables in .env file...' &&
         sed -i \"s/^VM_IP=VM_IP\\\$/VM_IP=\$VM_IP_VALUE/g\" .env &&
@@ -90,8 +95,22 @@ deploy:production:
         sed -i \"s/^WEB_AUTH_USER=WEB_AUTH_USER\\\$/WEB_AUTH_USER=\$WEB_USER_VALUE/g\" .env &&
         sed -i \"s/^WEB_AUTH_PASS=WEB_AUTH_PASS\\\$/WEB_AUTH_PASS=\$WEB_PASS_VALUE/g\" .env &&
         sed -i \"s|^SLACK_WEBHOOK_URL=SLACK_WEBHOOK_URL\\\$|SLACK_WEBHOOK_URL=\$SLACK_URL_VALUE|g\" .env &&
-        echo 'Modified .env content:' &&
-        head -10 .env &&
+        
+        echo 'Verifying .env file after replacements...' &&
+        echo '=== .env content (first 20 lines) ===' &&
+        head -20 .env &&
+        echo '=== End of .env content ===' &&
+        
+        echo 'Checking for any remaining placeholder values...' &&
+        if grep -E '=(GRAFANA_USERNAME|GRAFANA_PASSWORD|VM_IP|DOMAIN_ADDRESS|ACME_EMAIL|WEB_AUTH_USER|WEB_AUTH_PASS|SLACK_WEBHOOK_URL)$' .env; then
+          echo 'WARNING: Found unreplaced placeholder values!' &&
+          exit 1
+        fi &&
+        echo 'All placeholder values successfully replaced!' &&
+        
+        echo 'Checking for undefined variables in compose files...' &&
+        docker-compose config --quiet || echo 'Warning: compose config check failed' &&
+        
         echo '🐳 Restarting monitoring stack...' &&
         docker-compose down &&
         docker-compose pull &&
