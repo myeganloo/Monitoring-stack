@@ -6,6 +6,8 @@ stages:
 
 variables:
   DOCKER_DRIVER: overlay2
+  DOCKER_IMAGE: docker:27.1.1-dind
+  REGISTRY_LOGIN: docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
 
 # GitLab CI/CD Variables configured:
 # PRODUCTION_VM_IP - Production server IP address (protected)
@@ -39,14 +41,14 @@ deploy:production:
     - |
       ssh -o StrictHostKeyChecking=no -p 8090 root@${PRODUCTION_VM_IP} "
         echo 'Starting deployment...' &&
-        mkdir -p /opt/monitoring &&
-        cd /opt/monitoring &&
+        mkdir -p /opt/services/monitoring &&
+        cd /opt/services/monitoring &&
         
         echo 'Running registry login if provided...' &&
         eval \${REGISTRY_LOGIN:-true} &&
         
         echo '🐳 Docker login with CI token...' &&
-        docker login -u gitlab-ci-token -p \$CI_JOB_TOKEN \$CI_REGISTRY &&
+        ${REGISTRY_LOGIN} &&
         
         echo '🔍 Checking if git repo exists...' &&
         if [ ! -d '.git' ]; then
