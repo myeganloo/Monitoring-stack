@@ -10,7 +10,9 @@ variables:
 # GitLab CI/CD Variables configured:
 # PRODUCTION_VM_IP - Production server IP address (protected)
 # SSH_PRIVATE_KEY_RUNNER - SSH private key for server access (masked)
-# GITLAB_CI_TOKEN - GitLab CI token for private repo access (masked)
+# GITLAB_CI_TOKEN - GitLab CI token for private repo access (masked) - OPTIONAL
+# DEPLOY_TOKEN_USERNAME - Deploy token username (masked) - OPTIONAL  
+# DEPLOY_TOKEN_PASSWORD - Deploy token password (masked) - OPTIONAL
 # PRODUCTION_DOMAIN - Production domain (protected/masked/expanded)
 # PRODUCTION_HOST - Production hostname (protected)
 # SECURE_GRAFANA_USERNAME - Grafana admin username (protected/masked)
@@ -45,18 +47,48 @@ deploy:production:
         mkdir -p /opt/monitoring
         cd /opt/monitoring
         
-        echo "🔍 Configuring Git authentication..."
-        git config --global credential.helper store
-        echo "https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com" > ~/.git-credentials
+        echo "🔍 Configuring Git authentication (trying multiple methods)..."
         
-        echo "🔍 Checking if git repo exists..."
+        # Method 1: Try with built-in CI_JOB_TOKEN
         if [ ! -d ".git" ]; then
-          echo "📥 Cloning repository with CI token..."
-          git clone https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git .
+          echo "📥 Method 1: Cloning with CI_JOB_TOKEN..."
+          git clone https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/rahyar/monitoring.git . || echo "Method 1 failed"
+        fi
+        
+        # Method 2: Try with custom GITLAB_CI_TOKEN if Method 1 failed
+        if [ ! -d ".git" ] && [ -n "$GITLAB_CI_TOKEN" ]; then
+          echo "📥 Method 2: Cloning with GITLAB_CI_TOKEN..."
+          git clone https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git . || echo "Method 2 failed"
+        fi
+        
+        # Method 3: Try with Deploy Token if both failed
+        if [ ! -d ".git" ] && [ -n "$DEPLOY_TOKEN_USERNAME" ] && [ -n "$DEPLOY_TOKEN_PASSWORD" ]; then
+          echo "📥 Method 3: Cloning with Deploy Token..."
+          git clone https://$DEPLOY_TOKEN_USERNAME:$DEPLOY_TOKEN_PASSWORD@gitlab.com/rahyar/monitoring.git . || echo "Method 3 failed"
+        fi
+        
+        # Method 4: Fallback to public clone if all methods failed
+        if [ ! -d ".git" ]; then
+          echo "⚠️  All authentication methods failed. Trying public clone..."
+          git clone https://gitlab.com/rahyar/monitoring.git . || echo "❌ All clone methods failed!"
+        fi
+        
+        # Validate that we have the repo
+        if [ ! -d ".git" ]; then
+          echo "💥 FATAL: Could not clone repository. Check authentication tokens!"
+          exit 1
         else
-          echo "🔄 Pulling latest code with CI token..."
-          git remote set-url origin https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git
-          git pull origin main
+          echo "✅ Repository successfully available"
+        fi
+        
+        # If repo exists, just pull
+        if [ -d ".git" ]; then
+          echo "🔄 Pulling latest code..."
+          # Try different authentication methods for pull
+          git pull origin main || \
+          (git remote set-url origin https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
+          (git remote set-url origin https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
+          echo "All pull methods failed"
         fi
         
         echo "📁 Going to observability stack directory..."
