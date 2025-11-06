@@ -1,382 +1,69 @@
-# GitLab CI/CD Pipeline for Observability Monitoring Stack
-# Automated deployment pipeline for production environment
+# GitLab CI/CD Pipeline for Observability Stack
+# Simple deployment: pull code and restart containers
 
 stages:
-  - validate
-  - build
-  - test
-  - security
-  - deploy-production
-  - notify
+  - deploy
 
-# Global variables
 variables:
   DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: "/certs"
-  COMPOSE_PROJECT_NAME: "observability"
-  
-# Default image for jobs
+
+# GitLab CI/CD Variables configured:
+# PRODUCTION_VM_IP - Production server IP address (protected)
+# SSH_PRIVATE_KEY_RUNNER - SSH private key for server access (masked)
+# PRODUCTION_DOMAIN - Production domain (protected/masked/expanded)
+# PRODUCTION_HOST - Production hostname (protected)
+# SECURE_GRAFANA_USERNAME - Grafana admin username (protected/masked)
+# SECURE_GRAFANA_PASSWORD - Grafana admin password (protected/masked)
+# SECURE_ACME_EMAIL - Email for SSL certificates (protected/masked/expanded)
+# WEB_AUTH_USER - Basic auth username (protected/masked/expanded)
+# WEB_AUTH_PASS - Basic auth password hash (protected/masked/expanded)
+# SECURE_SLACK_WEBHOOK_URL - Slack webhook for notifications (protected/masked)
+
 default:
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
-  before_script:
-    - apk add --no-cache curl jq bash make git
-    - docker --version
-    - docker-compose --version || (apk add py3-pip && pip3 install docker-compose)
-
-# ========================================
-# VALIDATION STAGE
-# ========================================
-
-validate:syntax:
-  stage: validate
   image: alpine:latest
   before_script:
-    - apk add --no-cache docker-compose bash make
-  script:
-    - echo "🔍 Validating Docker Compose syntax..."
-    - cd observability/observability-full-stack
-    - docker-compose config --quiet
-    - echo "✅ Docker Compose syntax is valid"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-validate:env-template:
-  stage: validate
-  image: alpine:latest
-  before_script:
-    - apk add --no-cache bash
-  script:
-    - echo "🔍 Validating environment template..."
-    - cd observability/observability-full-stack
-    - |
-      if [ ! -f .env.example ]; then
-        echo "❌ .env.example file missing!"
-        exit 1
-      fi
-    - |
-      # Check required variables in .env.example
-      required_vars="VM_IP DOMAIN_ADDRESS GRAFANA_USERNAME GRAFANA_PASSWORD"
-      for var in $required_vars; do
-        if ! grep -q "^$var=" .env.example; then
-          echo "❌ Required variable $var missing from .env.example"
-          exit 1
-        fi
-      done
-    - echo "✅ Environment template is valid"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-validate:configs:
-  stage: validate
-  image: alpine:latest
-  before_script:
-    - apk add --no-cache yq bash
-  script:
-    - echo "🔍 Validating configuration files..."
-    - cd observability/observability-full-stack
-    # Validate Prometheus config
-    - |
-      if [ -f prometheus/prometheus.yml ]; then
-        yq eval prometheus/prometheus.yml > /dev/null
-        echo "✅ Prometheus config valid"
-      fi
-    # Validate Loki config  
-    - |
-      if [ -f loki/loki.yml ]; then
-        yq eval loki/loki.yml > /dev/null
-        echo "✅ Loki config valid"
-      fi
-    # Validate Alertmanager config
-    - |
-      if [ -f alertmanager/alertmanager.yml ]; then
-        yq eval alertmanager/alertmanager.yml > /dev/null
-        echo "✅ Alertmanager config valid"
-      fi
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-# ========================================
-# BUILD STAGE  
-# ========================================
-
-build:generate-configs:
-  stage: build
-  script:
-    - echo "🔧 Generating production deployment configuration..."
-    - cd observability/observability-full-stack
-    # Create production environment config using security variables
-    - |
-      cat > .env.production << EOF
-      HOSTNAME=observability-production  
-      RESTART_POLICY=unless-stopped
-      VM_IP=\${PRODUCTION_VM_IP}
-      DOMAIN_ADDRESS=\${PRODUCTION_DOMAIN}
-      PROMETHEUS_SUB=metrics
-      GRAFANA_SUB=grafana
-      ALERTMANAGER_SUB=alerts
-      PUSHGATEWAY_SUB=pushgw
-      LOKI_SUB=loki
-      PROMETHEUS_TAG=v3.4.1
-      GRAFANA_TAG=12.3.2
-      ALERTMANAGER_TAG=v0.29.1
-      PUSHGATEWAY_TAG=v1.12.0
-      CADVISOR_TAG=v0.50.0
-      NODE_EXPORTER_TAG=v1.10.1
-      BLACKBOX_TAG=v0.27.0
-      LOKI_TAG=3.3.2
-      PROMTAIL_TAG=3.3.2
-      TEMPO_SUB=2.7.2
-      K6_TARCING_TAG=v0.0.8
-      MEMCACHED_TAG=1.6.38
-      GRAFANA_USERNAME=\${SECURE_GRAFANA_USERNAME}
-      GRAFANA_PASSWORD=\${SECURE_GRAFANA_PASSWORD}
-      GRAFANA_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
-      ACME_EMAIL=\${SECURE_ACME_EMAIL}
-      WEB_AUTH_USER=\${SECURE_WEB_AUTH_USER}
-      WEB_AUTH_PASS=\${SECURE_WEB_AUTH_PASS}
-      SLACK_WEBHOOK_URL=\${SECURE_SLACK_WEBHOOK_URL}
-      SLACK_CHANNEL=#alerts
-      EOF
-    - echo "✅ Production configuration generated with security variables"
-  artifacts:
-    paths:
-      - observability/observability-full-stack/.env.production
-    expire_in: 1 hour
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-
-# ========================================
-# TEST STAGE
-# ========================================
-
-test:docker-compose:
-  stage: test
-  needs: ["build:generate-configs"]
-  script:
-    - echo "🧪 Testing Docker Compose deployment..."
-    - cd observability/observability-full-stack
-    - cp .env.example .env.test
-    # Set test values
-    - |
-      cat >> .env.test << EOF
-      VM_IP=127.0.0.1
-      DOMAIN_ADDRESS=test.local
-      GRAFANA_USERNAME=admin
-      GRAFANA_PASSWORD=testpassword123
-      ACME_EMAIL=test@example.com
-      WEB_AUTH_USER=admin
-      WEB_AUTH_PASS="{SHA}testpass"
-      EOF
-    - mv .env.test .env
-    # Test configuration generation
-    - ./generate-traefik-config.sh || echo "⚠️ Traefik config generation failed (expected in test)"
-    # Test compose file
-    - docker-compose config
-    - echo "✅ Docker Compose test passed"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-test:monitoring-endpoints:
-  stage: test
-  needs: ["test:docker-compose"]
-  script:
-    - echo "🧪 Testing monitoring service definitions..."
-    - cd observability/observability-full-stack  
-    # Validate service ports are exposed
-    - |
-      services="prometheus grafana alertmanager pushgateway loki tempo"
-      for service in $services; do
-        if docker-compose config | grep -A 10 "$service:" | grep -q "ports:"; then
-          echo "✅ $service has exposed ports"
-        else
-          echo "❌ $service missing port configuration"
-          exit 1
-        fi
-      done
-    - echo "✅ All monitoring endpoints configured"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-
-# ========================================
-# SECURITY STAGE
-# ========================================
-
-security:scan-configs:
-  stage: security
-  image: alpine:latest
-  before_script:
-    - apk add --no-cache bash grep
-  script:
-    - echo "🔒 Scanning for security issues..."
-    - cd observability/observability-full-stack
-    # Check for hardcoded secrets
-    - |
-      echo "Checking for hardcoded passwords..."
-      if grep -r "password.*=" . --include="*.yml" --include="*.yaml" | grep -v "GRAFANA_PASSWORD" | grep -v ".example"; then
-        echo "❌ Hardcoded passwords found!"
-        exit 1
-      fi
-    # Check for default credentials
-    - |
-      echo "Checking for default credentials..."
-      if grep -r "admin:admin\|root:root\|password:password" . --include="*.yml" --include="*.yaml"; then
-        echo "❌ Default credentials found!"
-        exit 1
-      fi
-    # Check SSL/TLS configurations
-    - |
-      echo "Checking SSL configurations..."
-      if [ -f traefik-config.yml ]; then
-        if grep -q "TLSv1.2\|TLSv1.3" traefik-config.yml; then
-          echo "✅ Modern TLS versions configured"
-        else
-          echo "⚠️ Consider upgrading TLS configuration"
-        fi
-      fi
-    - echo "✅ Security scan completed"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-  allow_failure: true
-
-# ========================================
-# PRODUCTION DEPLOYMENT
-# ========================================
+    - apk add --no-cache openssh-client
 
 deploy:production:
-  stage: deploy-production
-  needs: ["build:generate-configs", "security:scan-configs"]
-  environment:
-    name: production
-    url: https://grafana.${PRODUCTION_DOMAIN}
+  stage: deploy
   script:
-    - echo "🚀 Deploying to production environment..."
-    - cd observability/observability-full-stack
-    - cp .env.production .env
-    # Generate Traefik config with production values using security variables
-    - export VM_IP=$PRODUCTION_VM_IP
-    - export DOMAIN_ADDRESS=$PRODUCTION_DOMAIN
-    - export WEB_AUTH_PASS=$SECURE_WEB_AUTH_PASS
-    - ./generate-traefik-config.sh
-    # Setup SSH connection using security variables
+    - echo "🚀 Simple deployment to production server..."
+    - 'command -v ssh-agent >/dev/null || ( apk add --no-cache openssh-client )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY_RUNNER" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $PRODUCTION_VM_IP >> ~/.ssh/known_hosts
     - |
-      echo "🔐 Establishing secure connection to production server..."
-      mkdir -p ~/.ssh
-      echo "$SSH_PRIVATE_KEY_RUNNER" > ~/.ssh/id_rsa
-      chmod 600 ~/.ssh/id_rsa
-      echo "$SECURE_SSH_HOST_KEY" >> ~/.ssh/known_hosts
-    # Create deployment backup
-    - |
-      echo "💾 Creating deployment backup..."
-      ssh -o StrictHostKeyChecking=no $SECURE_SSH_USER@$PRODUCTION_HOST << 'EOF'
-        cd /opt/service/observability
-        if [ -d backup ]; then rm -rf backup.old && mv backup backup.old; fi
-        mkdir -p backup/$(date +%Y%m%d_%H%M%S)
-        docker-compose ps > backup/$(date +%Y%m%d_%H%M%S)/services-before-deploy.txt || true
-        cp -r . backup/$(date +%Y%m%d_%H%M%S)/ 2>/dev/null || true
-        echo "✅ Backup completed"
-      EOF
-    # Deploy to production using security variables
-    - |
-      echo "🚀 Deploying to production server..."
-      scp -o StrictHostKeyChecking=no -r . $SECURE_SSH_USER@$PRODUCTION_HOST:/opt/service/observability/
-      ssh -o StrictHostKeyChecking=no $SECURE_SSH_USER@$PRODUCTION_HOST << 'EOF'
-        cd /opt/service/observability
-        echo "⏹️ Stopping current services..."
-        make down || true
-        sleep 10
+      ssh root@$PRODUCTION_VM_IP << 'EOF'
+        echo "📁 Going to monitoring directory..."
+        cd /opt/monitoring/observability/observability-full-stack
         
-        echo "🚀 Starting updated services..."
-        make up PROFILE=observability
-        sleep 30
+        echo "🔄 Pulling latest code..."
+        git pull origin main
         
-        echo "🔍 Running health checks..."
-        # Wait for services to be fully ready
-        for i in {1..30}; do
-          if curl -f http://localhost:9090/-/healthy >/dev/null 2>&1; then
-            echo "✅ Prometheus is healthy"
-            break
-          fi
-          echo "⏳ Waiting for Prometheus... ($i/30)"
-          sleep 5
-        done
+        echo "⚙️ Updating environment variables from GitLab..."
+        # Export GitLab variables for envsubst
+        export VM_IP="${PRODUCTION_VM_IP}"
+        export DOMAIN_ADDRESS="${PRODUCTION_DOMAIN}"
+        export HOSTNAME="${PRODUCTION_HOST}"
+        export GRAFANA_USERNAME="${SECURE_GRAFANA_USERNAME}"
+        export GRAFANA_PASSWORD="${SECURE_GRAFANA_PASSWORD}"
+        export ACME_EMAIL="${SECURE_ACME_EMAIL}"
+        export WEB_AUTH_USER="${WEB_AUTH_USER}"
+        export WEB_AUTH_PASS="${WEB_AUTH_PASS}"
+        export SLACK_WEBHOOK_URL="${SECURE_SLACK_WEBHOOK_URL}"
         
-        for i in {1..30}; do
-          if curl -f http://localhost:3000/api/health >/dev/null 2>&1; then
-            echo "✅ Grafana is healthy"
-            break
-          fi
-          echo "⏳ Waiting for Grafana... ($i/30)"
-          sleep 5
-        done
+        # Generate .env with GitLab variables
+        envsubst < .env.example > .env
         
-        echo "✅ Production deployment completed and verified"
-      EOF
-    # Post-deployment verification
-    - |
-      echo "🔍 Final deployment verification..."
-      ssh -o StrictHostKeyChecking=no $SECURE_SSH_USER@$PRODUCTION_HOST << 'EOF'
-        cd /opt/service/observability
+        echo "🐳 Restarting containers..."
+        docker-compose down
+        docker-compose pull
+        docker-compose up -d
+        
+        echo "✅ Deployment completed!"
         docker-compose ps
-        echo "📊 Service status verified"
       EOF
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
-      when: manual
-  when: manual
-
-# ========================================
-# NOTIFICATION STAGE
-# ========================================
-
-notify:success:
-  stage: notify
-  image: alpine:latest
-  before_script:
-    - apk add --no-cache curl
-  script:
-    - |
-      echo "🎉 Production deployment successful!"
-      # Send success notification using secure webhook
-      if [ -n "$SECURE_SLACK_WEBHOOK_URL" ]; then
-        curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"✅ Observability Stack deployed successfully to Production\n- Commit: $CI_COMMIT_SHORT_SHA\n- Branch: $CI_COMMIT_REF_NAME\n- Pipeline: $CI_PIPELINE_URL\n- Services: Prometheus, Grafana, Alertmanager, Loki, Tempo\n- Access: https://grafana.$PRODUCTION_DOMAIN\"}" \
-          $SECURE_SLACK_WEBHOOK_URL
-      fi
-      echo "📊 Deployment summary:"
-      echo "- Environment: Production"
-      echo "- Domain: $PRODUCTION_DOMAIN" 
-      echo "- VM IP: $PRODUCTION_VM_IP"
-      echo "- Commit: $CI_COMMIT_SHORT_SHA"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  when: on_success
-
-notify:failure:
-  stage: notify
-  image: alpine:latest
-  before_script:
-    - apk add --no-cache curl
-  script:
-    - |
-      echo "❌ Production deployment failed!"
-      # Send failure notification using secure webhook
-      if [ -n "$SECURE_SLACK_WEBHOOK_URL" ]; then
-        curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"🚨 URGENT: Observability Stack deployment FAILED\n- Environment: Production\n- Commit: $CI_COMMIT_SHORT_SHA\n- Branch: $CI_COMMIT_REF_NAME\n- Pipeline: $CI_PIPELINE_URL\n- Job: $CI_JOB_URL\n- Action Required: Check logs and rollback if necessary\"}" \
-          $SECURE_SLACK_WEBHOOK_URL
-      fi
-      echo "🚨 Deployment failure details:"
-      echo "- Failed job: $CI_JOB_NAME"
-      echo "- Pipeline: $CI_PIPELINE_URL"
-      echo "- Logs: $CI_JOB_URL"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-  when: on_failure
