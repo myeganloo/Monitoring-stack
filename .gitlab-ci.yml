@@ -58,16 +58,25 @@ deploy:production:
         echo '📁 Going to observability stack directory...' &&
         cd observability/observability-full-stack &&
         echo '📝 Generating environment file with sed...' &&
+        echo 'Debug: Checking GitLab variables:' &&
+        echo \"PRODUCTION_VM_IP = \$PRODUCTION_VM_IP\" &&
+        echo \"PRODUCTION_DOMAIN = \$PRODUCTION_DOMAIN\" &&
+        echo \"PRODUCTION_HOST = \$PRODUCTION_HOST\" &&
         cp .env.example .env &&
-        sed -i \"s/\\\${VM_IP}/\$PRODUCTION_VM_IP/g\" .env &&
-        sed -i \"s/\\\${DOMAIN_ADDRESS}/\$PRODUCTION_DOMAIN/g\" .env &&
-        sed -i \"s/\\\${HOSTNAME}/\$PRODUCTION_HOST/g\" .env &&
-        sed -i \"s/\\\${GRAFANA_USERNAME}/\$SECURE_GRAFANA_USERNAME/g\" .env &&
-        sed -i \"s/\\\${GRAFANA_PASSWORD}/\$SECURE_GRAFANA_PASSWORD/g\" .env &&
-        sed -i \"s/\\\${ACME_EMAIL}/\$SECURE_ACME_EMAIL/g\" .env &&
-        sed -i \"s/\\\${WEB_AUTH_USER}/\$WEB_AUTH_USER/g\" .env &&
-        sed -i \"s/\\\${WEB_AUTH_PASS}/\$WEB_AUTH_PASS/g\" .env &&
-        sed -i \"s/\\\${SLACK_WEBHOOK_URL}/\$SECURE_SLACK_WEBHOOK_URL/g\" .env &&
+        echo 'Original .env.example content:' &&
+        head -10 .env.example &&
+        echo 'Starting sed replacements...' &&
+        sed -i \"s|\\\${\VM_IP:-.*}|\$PRODUCTION_VM_IP|g\" .env &&
+        sed -i \"s|\\\${\DOMAIN_ADDRESS:-.*}|\$PRODUCTION_DOMAIN|g\" .env &&
+        sed -i \"s|\\\${\HOSTNAME:-.*}|\$PRODUCTION_HOST|g\" .env &&
+        sed -i \"s|\\\${\GRAFANA_USERNAME:-.*}|\$SECURE_GRAFANA_USERNAME|g\" .env &&
+        sed -i \"s|\\\${\GRAFANA_PASSWORD:-.*}|\$SECURE_GRAFANA_PASSWORD|g\" .env &&
+        sed -i \"s|\\\${\ACME_EMAIL:-.*}|\$SECURE_ACME_EMAIL|g\" .env &&
+        sed -i \"s|\\\${\WEB_AUTH_USER:-.*}|\$WEB_AUTH_USER|g\" .env &&
+        sed -i \"s|\\\${\WEB_AUTH_PASS:-.*}|\$WEB_AUTH_PASS|g\" .env &&
+        sed -i \"s|\\\${\SLACK_WEBHOOK_URL:-.*}|\$SECURE_SLACK_WEBHOOK_URL|g\" .env &&
+        echo 'Modified .env content:' &&
+        head -10 .env &&
         echo '🐳 Restarting monitoring stack...' &&
         docker-compose down &&
         docker-compose pull &&
