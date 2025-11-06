@@ -53,12 +53,14 @@ deploy:production:
         echo 'Creating .env file from template...' &&
         cp .env.example .env &&
         
-        echo 'Debug: Checking GitLab CI variables...' &&
-        echo \"PRODUCTION_VM_IP: '\${PRODUCTION_VM_IP}'\" &&
-        echo \"PRODUCTION_DOMAIN: '\${PRODUCTION_DOMAIN}'\" &&
-        echo \"PRODUCTION_HOST: '\${PRODUCTION_HOST}'\" &&
-        echo \"SECURE_GRAFANA_USERNAME: '\${SECURE_GRAFANA_USERNAME}'\" &&
-        echo \"WEB_AUTH_USER: '\${WEB_AUTH_USER}'\" &&
+        echo '🔍 Debug: Checking GitLab CI variables...' &&
+        echo \"PRODUCTION_VM_IP: '\${PRODUCTION_VM_IP}' (length: \${#PRODUCTION_VM_IP})\" &&
+        echo \"PRODUCTION_DOMAIN: '\${PRODUCTION_DOMAIN}' (length: \${#PRODUCTION_DOMAIN})\" &&
+        echo \"PRODUCTION_HOST: '\${PRODUCTION_HOST}' (length: \${#PRODUCTION_HOST})\" &&
+        echo \"SECURE_GRAFANA_USERNAME: '\${SECURE_GRAFANA_USERNAME}' (length: \${#SECURE_GRAFANA_USERNAME})\" &&
+        echo \"WEB_AUTH_USER: '\${WEB_AUTH_USER}' (length: \${#WEB_AUTH_USER})\" &&
+        echo \"CI_COMMIT_BRANCH: '\${CI_COMMIT_BRANCH}'\" &&
+        echo \"CI_ENVIRONMENT_NAME: '\${CI_ENVIRONMENT_NAME}'\" &&
         
         echo 'Setting fallback values for empty variables...' &&
         VM_IP_VAL=\${PRODUCTION_VM_IP:-192.168.80.25} &&
