@@ -72,22 +72,24 @@ deploy:production:
         
         cp .env.example .env &&
         echo 'Starting sed replacements...' &&
-        sed -i \"s|\\\${\VM_IP:-.*}|\$VM_IP_VALUE|g\" .env &&
-        sed -i \"s|\\\${\DOMAIN_ADDRESS:-.*}|\$DOMAIN_VALUE|g\" .env &&
-        sed -i \"s|\\\${\HOSTNAME:-.*}|\$HOST_VALUE|g\" .env &&
+        echo 'Setting up authentication variables with fallbacks...' &&
         GRAFANA_USER_VALUE=\${SECURE_GRAFANA_USERNAME:-admin} &&
         GRAFANA_PASS_VALUE=\${SECURE_GRAFANA_PASSWORD:-secure_password_here} &&
         ACME_EMAIL_VALUE=\${SECURE_ACME_EMAIL:-admin@erahyar.com} &&
         WEB_USER_VALUE=\${WEB_AUTH_USER:-admin} &&
-        WEB_PASS_VALUE=\${WEB_AUTH_PASS:-{SHA}hashed_password_here} &&
+        WEB_PASS_VALUE=\${WEB_AUTH_PASS:-\\\$2y\\\$10\\\$example.hash.here} &&
         SLACK_URL_VALUE=\${SECURE_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/YOUR/WEBHOOK/URL} &&
         
-        sed -i \"s|\\\${\GRAFANA_USERNAME:-.*}|\$GRAFANA_USER_VALUE|g\" .env &&
-        sed -i \"s|\\\${\GRAFANA_PASSWORD:-.*}|\$GRAFANA_PASS_VALUE|g\" .env &&
-        sed -i \"s|\\\${\ACME_EMAIL:-.*}|\$ACME_EMAIL_VALUE|g\" .env &&
-        sed -i \"s|\\\${\WEB_AUTH_USER:-.*}|\$WEB_USER_VALUE|g\" .env &&
-        sed -i \"s|\\\${\WEB_AUTH_PASS:-.*}|\$WEB_PASS_VALUE|g\" .env &&
-        sed -i \"s|\\\${\SLACK_WEBHOOK_URL:-.*}|\$SLACK_URL_VALUE|g\" .env &&
+        echo 'Replacing variables in .env file...' &&
+        sed -i \"s/^VM_IP=VM_IP\\\$/VM_IP=\$VM_IP_VALUE/g\" .env &&
+        sed -i \"s/^DOMAIN_ADDRESS=DOMAIN_ADDRESS\\\$/DOMAIN_ADDRESS=\$DOMAIN_VALUE/g\" .env &&
+        sed -i \"s/^HOSTNAME=observability-production\\\$/HOSTNAME=\$HOST_VALUE/g\" .env &&
+        sed -i \"s/^GRAFANA_USERNAME=GRAFANA_USERNAME\\\$/GRAFANA_USERNAME=\$GRAFANA_USER_VALUE/g\" .env &&
+        sed -i \"s/^GRAFANA_PASSWORD=GRAFANA_PASSWORD\\\$/GRAFANA_PASSWORD=\$GRAFANA_PASS_VALUE/g\" .env &&
+        sed -i \"s/^ACME_EMAIL=ACME_EMAIL\\\$/ACME_EMAIL=\$ACME_EMAIL_VALUE/g\" .env &&
+        sed -i \"s/^WEB_AUTH_USER=WEB_AUTH_USER\\\$/WEB_AUTH_USER=\$WEB_USER_VALUE/g\" .env &&
+        sed -i \"s/^WEB_AUTH_PASS=WEB_AUTH_PASS\\\$/WEB_AUTH_PASS=\$WEB_PASS_VALUE/g\" .env &&
+        sed -i \"s|^SLACK_WEBHOOK_URL=SLACK_WEBHOOK_URL\\\$|SLACK_WEBHOOK_URL=\$SLACK_URL_VALUE|g\" .env &&
         echo 'Modified .env content:' &&
         head -10 .env &&
         echo '🐳 Restarting monitoring stack...' &&
