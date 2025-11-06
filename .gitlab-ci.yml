@@ -33,17 +33,14 @@ deploy:production:
   script:
     - echo "🚀 Simple deployment to production server..."
     - echo "🔍 Debug - PRODUCTION_VM_IP = ${PRODUCTION_VM_IP}"
+    - export CI=true
     - 'command -v ssh-agent >/dev/null || ( apk add --no-cache openssh-client )'
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY_RUNNER" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - echo "🔍 Testing SSH connectivity to ${PRODUCTION_VM_IP}:8090..."
-    - timeout 10 nc -z $PRODUCTION_VM_IP 8090 || echo "❌ SSH port 8090 not reachable"
-    - echo "🔍 Adding SSH host key for port 8090..."
-    - ssh-keyscan -p 8090 -H $PRODUCTION_VM_IP >> ~/.ssh/known_hosts || echo "StrictHostKeyChecking no" >> ~/.ssh/config
     - |
-      ssh -p 8090 root@$PRODUCTION_VM_IP << EOF
+      ssh -o StrictHostKeyChecking=no -p 8090 root@${PRODUCTION_VM_IP} "
         echo "📁 Setting up monitoring directory..."
         mkdir -p /opt/monitoring
         cd /opt/monitoring
