@@ -43,16 +43,17 @@ deploy:production:
         echo 'Starting deployment...' &&
         mkdir -p /opt/services/monitoring &&
         cd /opt/services/ &&
-        #run git clone if .git directory does not exist
+        echo 'Checking git repository...' &&
         if [ ! -d "monitoring/.git" ]; then
-          git clone git@git.erahyar.com:rahyar/monitoring.git &&
-        fi
-        ##check if .git directory exists
+          echo 'Cloning repository...' &&
+          git clone git@git.erahyar.com:rahyar/monitoring.git
+        fi &&
         if [ -d "monitoring/.git" ]; then
+          echo 'Updating repository...' &&
           cd monitoring &&
           git reset --hard &&
           git pull --force
-        fi
+        fi &&
 
         echo '📁 Going to observability stack directory...' &&
         cd observability/observability-full-stack &&
