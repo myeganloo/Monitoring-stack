@@ -61,13 +61,19 @@ deploy:production:
           git clone https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git . || echo "Method 2 failed"
         fi
         
-        # Method 3: Try with Deploy Token if both failed
-        if [ ! -d ".git" ] && [ -n "$DEPLOY_TOKEN_USERNAME" ] && [ -n "$DEPLOY_TOKEN_PASSWORD" ]; then
-          echo "📥 Method 3: Cloning with Deploy Token..."
-          git clone https://$DEPLOY_TOKEN_USERNAME:$DEPLOY_TOKEN_PASSWORD@gitlab.com/rahyar/monitoring.git . || echo "Method 3 failed"
+        # Method 3: Try with REGISTRY_LOGIN if available
+        if [ ! -d ".git" ] && [ -n "$REGISTRY_LOGIN" ]; then
+          echo "📥 Method 3: Cloning with REGISTRY_LOGIN..."
+          git clone https://gitlab-ci-token:$REGISTRY_LOGIN@gitlab.com/rahyar/monitoring.git . || echo "Method 3 failed"
         fi
         
-        # Method 4: Fallback to public clone if all methods failed
+        # Method 4: Try with Deploy Token if others failed
+        if [ ! -d ".git" ] && [ -n "$DEPLOY_TOKEN_USERNAME" ] && [ -n "$DEPLOY_TOKEN_PASSWORD" ]; then
+          echo "📥 Method 4: Cloning with Deploy Token..."
+          git clone https://$DEPLOY_TOKEN_USERNAME:$DEPLOY_TOKEN_PASSWORD@gitlab.com/rahyar/monitoring.git . || echo "Method 4 failed"
+        fi
+        
+        # Method 5: Fallback to public clone if all methods failed
         if [ ! -d ".git" ]; then
           echo "⚠️  All authentication methods failed. Trying public clone..."
           git clone https://gitlab.com/rahyar/monitoring.git . || echo "❌ All clone methods failed!"
