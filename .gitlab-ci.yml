@@ -154,33 +154,33 @@ build:generate-configs:
 # TEST STAGE
 # ========================================
 
-# test:docker-compose:
-#   stage: test
-#   needs: ["build:generate-configs"]
-#   script:
-#     - echo "🧪 Testing Docker Compose deployment..."
-#     - cd observability/observability-full-stack
-#     - cp .env.example .env.test
-#     # Set test values
-#     - |
-#       cat >> .env.test << EOF
-#       VM_IP=127.0.0.1
-#       DOMAIN_ADDRESS=test.local
-#       GRAFANA_USERNAME=admin
-#       GRAFANA_PASSWORD=testpassword123
-#       ACME_EMAIL=test@example.com
-#       WEB_AUTH_USER=admin
-#       WEB_AUTH_PASS="{SHA}testpass"
-#       EOF
-#     - mv .env.test .env
-#     # Test configuration generation
-#     - ./generate-traefik-config.sh || echo "⚠️ Traefik config generation failed (expected in test)"
-#     # Test compose file
-#     - docker-compose config
-#     - echo "✅ Docker Compose test passed"
-#   rules:
-#     - if: '$CI_PIPELINE_SOURCE == "push"'
-#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+test:docker-compose:
+  stage: test
+  needs: ["build:generate-configs"]
+  script:
+    - echo "🧪 Testing Docker Compose deployment..."
+    - cd observability/observability-full-stack
+    - cp .env.example .env.test
+    # Set test values
+    - |
+      cat >> .env.test << EOF
+      VM_IP=127.0.0.1
+      DOMAIN_ADDRESS=test.local
+      GRAFANA_USERNAME=admin
+      GRAFANA_PASSWORD=testpassword123
+      ACME_EMAIL=test@example.com
+      WEB_AUTH_USER=admin
+      WEB_AUTH_PASS="{SHA}testpass"
+      EOF
+    - mv .env.test .env
+    # Test configuration generation
+    #- ./generate-traefik-config.sh || echo "⚠️ Traefik config generation failed (expected in test)"
+    # Test compose file
+    - docker-compose config
+    - echo "✅ Docker Compose test passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 test:monitoring-endpoints:
   stage: test
