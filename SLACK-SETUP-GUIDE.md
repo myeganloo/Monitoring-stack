@@ -1,7 +1,7 @@
 # 🔗 Slack Webhook Configuration Guide
 
-## ✅ **Webhook URL Verified**
-Your Slack webhook is working correctly:
+## ✅ **Webhook URL Format**
+Your Slack webhook should follow this format:
 ```
 https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
@@ -13,7 +13,7 @@ Add these to your GitLab project: **Settings** → **CI/CD** → **Variables**
 
 ```bash
 # Slack Configuration (Masked & Protected)
-SECURE_SLACK_WEBHOOK_URL = https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
+SECURE_SLACK_WEBHOOK_URL = https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 ```
 
 **Variable Settings:**
@@ -25,7 +25,7 @@ SECURE_SLACK_WEBHOOK_URL = https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/
 
 ### **Test Basic Webhook:**
 ```bash
-curl -X POST --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"AlertManager\", \"text\": \"✅ Webhook configuration test successful!\", \"icon_emoji\": \":white_check_mark:\"}" https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
+curl -X POST --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"AlertManager\", \"text\": \"✅ Webhook configuration test successful!\", \"icon_emoji\": \":white_check_mark:\"}" YOUR_WEBHOOK_URL_HERE
 ```
 
 ### **Test AlertManager Format:**
@@ -47,14 +47,13 @@ curl -X POST -H 'Content-type: application/json' --data '{
       ]
     }
   ]
-}' https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
+}' YOUR_WEBHOOK_URL_HERE
 ```
 
 ## 🚀 **Deployment Process**
 
 ### **1. Commit Your Changes:**
 ```bash
-cd /home/mohsen/Documents/Project/rahyar/monitoring
 git add .
 git commit -m "feat: configure Slack webhook for AlertManager notifications"
 git push origin main
@@ -64,7 +63,7 @@ git push origin main
 1. Go to GitLab project → Settings → CI/CD → Variables
 2. Click "Add Variable"
 3. Key: `SECURE_SLACK_WEBHOOK_URL`
-4. Value: `https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX`
+4. Value: `https://hooks.slack.com/services/YOUR/ACTUAL/WEBHOOK_URL`
 5. Check: ✅ Masked ✅ Protected
 6. Click "Add Variable"
 
@@ -105,13 +104,13 @@ docker logs alertmanager
 
 ## ⚠️ **Security Notes**
 
-- ✅ Webhook URL is now stored as masked GitLab variable
+- ✅ Webhook URL is stored as masked GitLab variable
 - ✅ URL won't appear in pipeline logs
 - ✅ Only protected branches can access the webhook
 - 🔄 Rotate webhook if accidentally exposed
 
 ## 🎉 **Ready to Deploy!**
 
-Your Slack webhook is configured and tested. The AlertManager will now send professional monitoring alerts to your `#alerts` channel with interactive buttons and rich formatting.
+Your Slack webhook can now be configured securely. The AlertManager will send professional monitoring alerts to your `#alerts` channel with interactive buttons and rich formatting.
 
-**Next: Push your changes and approve the GitLab deployment!** 🚀
+**Next: Add your actual webhook URL to GitLab variables and deploy!** 🚀
