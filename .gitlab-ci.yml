@@ -84,22 +84,22 @@ deploy:production:
         head -15 .env &&
         echo '=== End of .env preview ===' &&
         
-        echo 'Testing docker-compose config...' &&
-        if docker-compose config --quiet; then
+        echo 'Testing docker compose config...' &&
+        if docker compose config --quiet; then
           echo 'Docker compose config is valid!' 
         else
           echo 'Docker compose config has issues:' &&
-          docker-compose config 2>&1 | head -10
+          docker compose config 2>&1 | head -10
         fi &&
         
         # Restart containers
         echo '🐳 Restarting monitoring stack...' &&
-        docker-compose down --remove-orphans &&
-        docker-compose pull &&
-        docker-compose up -d &&
+        docker compose down --remove-orphans &&
+        docker compose pull &&
+        docker compose up -d &&
         
         echo '✅ Deployment completed!' &&
-        docker-compose ps
+        docker compose ps
         "
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'

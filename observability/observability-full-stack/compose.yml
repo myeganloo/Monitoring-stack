@@ -39,9 +39,6 @@ services:
     networks:
       - web_net
       - app_net
-    profiles:
-      - observability
-      - monitoring
 
   grafana:
     image: grafana/grafana:${GRAFANA_TAG}
@@ -65,11 +62,7 @@ services:
     networks:
       - web_net
       - app_net
-    profiles:
-      - monitoring
-      - logging
-      - visualizations
-      - observability
+      
 
   alertmanager:
     image: prom/alertmanager:${ALERTMANAGER_TAG}
@@ -90,10 +83,7 @@ services:
     networks:
       - web_net
       - app_net
-    profiles:
-      - monitoring
-      - alerting
-      - observability
+     
 
   pushgateway:
     image: prom/pushgateway:${PUSHGATEWAY_TAG}
@@ -109,9 +99,6 @@ services:
     networks:
       - web_net
       - app_net
-    profiles:
-      - monitoring
-      - observability
 
   cadvisor:
     image: docker.io/ahmadrafiee/cadvisor:${CADVISOR_TAG}
@@ -126,9 +113,6 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
     networks:
       - app_net
-    profiles:
-      - monitoring
-      - observability
 
   blackbox-exporter:
     image: prom/blackbox-exporter:${BLACKBOX_TAG}
@@ -141,9 +125,6 @@ services:
       - ./blackbox:/etc/blackboxexporter
     networks:
       - app_net
-    profiles:
-      - observability
-      - monitoring
 
   node-exporter:
     image: prom/node-exporter:${NODE_EXPORTER_TAG}
@@ -161,9 +142,6 @@ services:
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
     networks:
       - app_net
-    profiles:
-      - monitoring
-      - observability
 
   loki:
     image: grafana/loki:${LOKI_TAG}
@@ -179,9 +157,6 @@ services:
     networks:
       - web_net
       - app_net
-    profiles:
-      - observability
-      - logging
 
   promtail:
     image: grafana/promtail:${PROMTAIL_TAG}
@@ -195,9 +170,6 @@ services:
     command: -config.file=/etc/promtail/promtail.yml
     networks:
       - app_net
-    profiles:
-      - observability
-      - logging
 
   memcached:
     image: memcached:${MEMCACHED_TAG}
@@ -209,9 +181,6 @@ services:
       - MEMCACHED_THREADS=4       # Number of threads to use
     networks:
       - app_net
-    profiles:
-      - observability
-      - tracing
 
   tempo:
     image: grafana/tempo:${TEMPO_SUB}
@@ -231,9 +200,6 @@ services:
       - "${VM_IP}:9411:9411"     # zipkin
     networks:
       - app_net
-    profiles:
-      - observability
-      - tracing
 
   k6-tracing:
     image: ghcr.io/grafana/xk6-client-tracing:${K6_TARCING_TAG}
@@ -246,7 +212,4 @@ services:
       - tempo
     networks:
       - app_net
-    profiles:
-      - tracing
-      - tracing-load
-      - observability
+     
