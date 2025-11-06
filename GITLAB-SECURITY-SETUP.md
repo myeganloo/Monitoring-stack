@@ -25,7 +25,7 @@ Add these variables with **Masked** and **Protected** flags:
 ```bash
 # SSH Connection (Protected: ✅, Masked: ✅)
 SECURE_SSH_USER         = deploy
-SECURE_SSH_PRIVATE_KEY  = <base64_encoded_private_key>
+SSH_PRIVATE_KEY_RUNNER  = <base64_encoded_private_key>
 SECURE_SSH_HOST_KEY     = <ssh_host_key_from_keyscan>
 
 # Application Credentials (Protected: ✅, Masked: ✅)
@@ -54,7 +54,7 @@ ssh-copy-id -i ~/.ssh/monitoring_deploy_key.pub deploy@192.168.80.25
 
 # Base64 encode private key for GitLab
 base64 -w 0 ~/.ssh/monitoring_deploy_key
-# Copy this output for SECURE_SSH_PRIVATE_KEY variable
+# Copy this output for SSH_PRIVATE_KEY_RUNNER variable
 
 # Get SSH host key
 ssh-keyscan 192.168.80.25
@@ -66,8 +66,8 @@ ssh-keyscan 192.168.80.25
 # On production server (192.168.80.25)
 sudo useradd -m -s /bin/bash deploy
 sudo usermod -aG docker deploy
-sudo mkdir -p /opt/observability
-sudo chown deploy:deploy /opt/observability
+sudo mkdir -p /opt/service/observability
+sudo chown deploy:deploy /opt/service/observability
 ```
 
 ## 🚀 **GitLab Variable Setup Checklist**
@@ -77,7 +77,7 @@ sudo chown deploy:deploy /opt/observability
 - [ ] `PRODUCTION_VM_IP` (Protected)  
 - [ ] `PRODUCTION_DOMAIN` (Protected)
 - [ ] `SECURE_SSH_USER` (Masked & Protected)
-- [ ] `SECURE_SSH_PRIVATE_KEY` (Masked & Protected)
+- [ ] `SSH_PRIVATE_KEY_RUNNER` (Masked & Protected)
 - [ ] `SECURE_SSH_HOST_KEY` (Masked & Protected)
 - [ ] `SECURE_GRAFANA_USERNAME` (Masked & Protected)
 - [ ] `SECURE_GRAFANA_PASSWORD` (Masked & Protected)
@@ -157,7 +157,7 @@ After deployment, check service endpoints:
 ## ⚠️ **Troubleshooting**
 
 ### **Common Issues:**
-1. **SSH Connection Failed**: Check `SECURE_SSH_PRIVATE_KEY` is base64 encoded
+1. **SSH Connection Failed**: Check `SSH_PRIVATE_KEY_RUNNER` is base64 encoded
 2. **Permission Denied**: Ensure deploy user is in docker group
 3. **Variables Not Found**: Check variable names match exactly (case-sensitive)
 4. **Masked Variable Errors**: Verify sensitive data uses `SECURE_` prefix
@@ -168,7 +168,7 @@ After deployment, check service endpoints:
 env | grep -E "(PRODUCTION|SECURE)_" | sort
 
 # Verify SSH key format
-echo "$SECURE_SSH_PRIVATE_KEY" | base64 -d | ssh-keygen -lf -
+echo "$SSH_PRIVATE_KEY_RUNNER" | base64 -d | ssh-keygen -lf -
 
 # Test Docker on target server
 ssh deploy@$PRODUCTION_HOST "docker ps"

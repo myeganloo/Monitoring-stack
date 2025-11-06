@@ -200,10 +200,10 @@ test_server_setup() {
     fi
     
     print_info "Testing directory permissions..."
-    if ssh -i "$test_key" -o StrictHostKeyChecking=no "$test_user@$test_host" "mkdir -p /opt/observability/test && rmdir /opt/observability/test"; then
+    if ssh -i "$test_key" -o StrictHostKeyChecking=no "$test_user@$test_host" "mkdir -p /opt/service/observability/test && rmdir /opt/service/observability/test"; then
         print_info "✅ Directory permissions are correct"
     else
-        print_error "❌ Cannot write to /opt/observability/"
+        print_error "❌ Cannot write to /opt/service/observability/"
     fi
 }
 

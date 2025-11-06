@@ -269,14 +269,14 @@ deploy:production:
     - |
       echo "🔐 Establishing secure connection to production server..."
       mkdir -p ~/.ssh
-      echo "$SECURE_SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_rsa
+      echo "$SSH_PRIVATE_KEY_RUNNER" > ~/.ssh/id_rsa
       chmod 600 ~/.ssh/id_rsa
       echo "$SECURE_SSH_HOST_KEY" >> ~/.ssh/known_hosts
     # Create deployment backup
     - |
       echo "💾 Creating deployment backup..."
       ssh -o StrictHostKeyChecking=no $SECURE_SSH_USER@$PRODUCTION_HOST << 'EOF'
-        cd /opt/observability
+        cd /opt/service/observability
         if [ -d backup ]; then rm -rf backup.old && mv backup backup.old; fi
         mkdir -p backup/$(date +%Y%m%d_%H%M%S)
         docker-compose ps > backup/$(date +%Y%m%d_%H%M%S)/services-before-deploy.txt || true
@@ -286,9 +286,9 @@ deploy:production:
     # Deploy to production using security variables
     - |
       echo "🚀 Deploying to production server..."
-      scp -o StrictHostKeyChecking=no -r . $SECURE_SSH_USER@$PRODUCTION_HOST:/opt/observability/
+      scp -o StrictHostKeyChecking=no -r . $SECURE_SSH_USER@$PRODUCTION_HOST:/opt/service/observability/
       ssh -o StrictHostKeyChecking=no $SECURE_SSH_USER@$PRODUCTION_HOST << 'EOF'
-        cd /opt/observability
+        cd /opt/service/observability
         echo "⏹️ Stopping current services..."
         make down || true
         sleep 10
@@ -323,7 +323,7 @@ deploy:production:
     - |
       echo "🔍 Final deployment verification..."
       ssh -o StrictHostKeyChecking=no $SECURE_SSH_USER@$PRODUCTION_HOST << 'EOF'
-        cd /opt/observability
+        cd /opt/service/observability
         docker-compose ps
         echo "📊 Service status verified"
       EOF

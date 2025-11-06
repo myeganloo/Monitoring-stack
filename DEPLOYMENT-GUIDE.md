@@ -30,7 +30,7 @@ All sensitive data is now stored as **masked and protected** GitLab CI/CD variab
 # Server Connection (Masked & Protected)
 PRODUCTION_HOST=192.168.80.25               # Production server IP
 SECURE_SSH_USER=deploy                      # SSH username (masked)
-SECURE_SSH_PRIVATE_KEY=<base64_key>         # SSH private key (masked)
+SSH_PRIVATE_KEY_RUNNER=<base64_key>         # SSH private key (masked)
 SECURE_SSH_HOST_KEY=<ssh_host_key>          # SSH host key (masked)
 
 # Environment Configuration
@@ -81,7 +81,7 @@ ssh-keygen -t rsa -b 4096 -f ~/.ssh/monitoring_deploy_key
 # Add public key to production server
 ssh-copy-id -i ~/.ssh/monitoring_deploy_key.pub deploy@192.168.80.25
 
-# Base64 encode private key for GitLab SECURE_SSH_PRIVATE_KEY variable
+# Base64 encode private key for GitLab SSH_PRIVATE_KEY_RUNNER variable
 base64 -w 0 ~/.ssh/monitoring_deploy_key
 
 # Get host key for SECURE_SSH_HOST_KEY variable
@@ -89,7 +89,7 @@ ssh-keyscan 192.168.80.25
 
 # Example GitLab variable setup:
 SECURE_SSH_USER="deploy"
-SECURE_SSH_PRIVATE_KEY="<output_from_base64_command>"
+SSH_PRIVATE_KEY_RUNNER="<output_from_base64_command>"
 SECURE_SSH_HOST_KEY="<output_from_ssh-keyscan>"
 ```
 
@@ -97,9 +97,9 @@ SECURE_SSH_HOST_KEY="<output_from_ssh-keyscan>"
 
 ```bash
 # On production server (192.168.80.25)
-sudo mkdir -p /opt/observability
-sudo chown deploy:deploy /opt/observability
-sudo chmod 755 /opt/observability
+sudo mkdir -p /opt/service/observability
+sudo chown deploy:deploy /opt/service/observability
+sudo chmod 755 /opt/service/observability
 
 # Install required tools
 sudo apt update
@@ -192,7 +192,7 @@ curl -f http://$VM_IP:9093/-/healthy     # Alertmanager
 ```bash
 # SSH to deployed server
 ssh deploy@$STAGING_HOST
-cd /opt/observability
+cd /opt/service/observability
 
 # Check service status
 make status
@@ -245,7 +245,7 @@ netstat -tlnp | grep $PORT
 ssh deploy@$HOST
 
 # Restore from backup
-cd /opt/observability
+cd /opt/service/observability
 make down
 rm -rf current_deployment
 mv backup current_deployment
