@@ -10,6 +10,7 @@ variables:
 # GitLab CI/CD Variables configured:
 # PRODUCTION_VM_IP - Production server IP address (protected)
 # SSH_PRIVATE_KEY_RUNNER - SSH private key for server access (masked)
+# REGISTRY_LOGIN - Registry login token for private repo access (masked) - PRIMARY
 # GITLAB_CI_TOKEN - GitLab CI token for private repo access (masked) - OPTIONAL
 # DEPLOY_TOKEN_USERNAME - Deploy token username (masked) - OPTIONAL  
 # DEPLOY_TOKEN_PASSWORD - Deploy token password (masked) - OPTIONAL
@@ -93,6 +94,7 @@ deploy:production:
           # Try different authentication methods for pull
           git pull origin main || \
           (git remote set-url origin https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
+          (git remote set-url origin https://gitlab-ci-token:$REGISTRY_LOGIN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
           (git remote set-url origin https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
           echo "All pull methods failed"
         fi
