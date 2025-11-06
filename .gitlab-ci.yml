@@ -10,10 +10,7 @@ variables:
 # GitLab CI/CD Variables configured:
 # PRODUCTION_VM_IP - Production server IP address (protected)
 # SSH_PRIVATE_KEY_RUNNER - SSH private key for server access (masked)
-# REGISTRY_LOGIN - Registry login token for private repo access (masked) - PRIMARY
-# GITLAB_CI_TOKEN - GitLab CI token for private repo access (masked) - OPTIONAL
-# DEPLOY_TOKEN_USERNAME - Deploy token username (masked) - OPTIONAL  
-# DEPLOY_TOKEN_PASSWORD - Deploy token password (masked) - OPTIONAL
+# REGISTRY_LOGIN - Registry login command for authentication (masked)
 # PRODUCTION_DOMAIN - Production domain (protected/masked/expanded)
 # PRODUCTION_HOST - Production hostname (protected)
 # SECURE_GRAFANA_USERNAME - Grafana admin username (protected/masked)
@@ -41,104 +38,59 @@ deploy:production:
     - chmod 700 ~/.ssh
     - |
       ssh -o StrictHostKeyChecking=no -p 8090 root@${PRODUCTION_VM_IP} "
-        echo "📁 Setting up monitoring directory..."
-        mkdir -p /opt/monitoring
-        cd /opt/monitoring
+        ${REGISTRY_LOGIN} &&
+        mkdir -p /opt/monitoring &&
+        cd /opt/monitoring &&
         
-        echo "🔍 Configuring Git authentication (trying multiple methods)..."
+        echo '� Docker login with CI token...' &&
+        docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY &&
         
-        # Method 1: Try with built-in CI_JOB_TOKEN
-        if [ ! -d ".git" ]; then
-          echo "📥 Method 1: Cloning with CI_JOB_TOKEN..."
-          git clone https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/rahyar/monitoring.git . || echo "Method 1 failed"
-        fi
-        
-        # Method 2: Try with custom GITLAB_CI_TOKEN if Method 1 failed
-        if [ ! -d ".git" ] && [ -n "$GITLAB_CI_TOKEN" ]; then
-          echo "📥 Method 2: Cloning with GITLAB_CI_TOKEN..."
-          git clone https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git . || echo "Method 2 failed"
-        fi
-        
-        # Method 3: Try with REGISTRY_LOGIN if available
-        if [ ! -d ".git" ] && [ -n "$REGISTRY_LOGIN" ]; then
-          echo "📥 Method 3: Cloning with REGISTRY_LOGIN..."
-          git clone https://gitlab-ci-token:$REGISTRY_LOGIN@gitlab.com/rahyar/monitoring.git . || echo "Method 3 failed"
-        fi
-        
-        # Method 4: Try with Deploy Token if others failed
-        if [ ! -d ".git" ] && [ -n "$DEPLOY_TOKEN_USERNAME" ] && [ -n "$DEPLOY_TOKEN_PASSWORD" ]; then
-          echo "📥 Method 4: Cloning with Deploy Token..."
-          git clone https://$DEPLOY_TOKEN_USERNAME:$DEPLOY_TOKEN_PASSWORD@gitlab.com/rahyar/monitoring.git . || echo "Method 4 failed"
-        fi
-        
-        # Method 5: Fallback to public clone if all methods failed
-        if [ ! -d ".git" ]; then
-          echo "⚠️  All authentication methods failed. Trying public clone..."
-          git clone https://gitlab.com/rahyar/monitoring.git . || echo "❌ All clone methods failed!"
-        fi
-        
-        # Validate that we have the repo
-        if [ ! -d ".git" ]; then
-          echo "💥 FATAL: Could not clone repository. Check authentication tokens!"
-          exit 1
+        echo '🔍 Checking if git repo exists...' &&
+        if [ ! -d '.git' ]; then
+          echo '📥 Cloning repository...' &&
+          git clone https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/rahyar/monitoring.git .
         else
-          echo "✅ Repository successfully available"
-        fi
+          echo '� Pulling latest code...' &&
+          git pull origin main
+        fi &&
         
-        # If repo exists, just pull
-        if [ -d ".git" ]; then
-          echo "🔄 Pulling latest code..."
-          # Try different authentication methods for pull
-          git pull origin main || \
-          (git remote set-url origin https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
-          (git remote set-url origin https://gitlab-ci-token:$REGISTRY_LOGIN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
-          (git remote set-url origin https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git && git pull origin main) || \
-          echo "All pull methods failed"
-        fi
+        echo '📁 Going to observability stack directory...' &&
+        cd observability/observability-full-stack &&
         
-        echo "📁 Going to observability stack directory..."
-        cd observability/observability-full-stack
+        echo '⚙️ Installing required packages...' &&
+        if ! command -v envsubst > /dev/null; then apt-get update && apt-get install -y gettext-base; fi &&
         
-        echo "⚙️ Updating environment variables from GitLab..."
-        # Install envsubst if not available
-        if ! command -v envsubst &> /dev/null; then
-          echo "📦 Installing gettext-base for envsubst..."
-          apt-get update && apt-get install -y gettext-base
-        fi
+        echo '🔧 Updating environment variables from GitLab...' &&
+        export VM_IP='$PRODUCTION_VM_IP' &&
+        export DOMAIN_ADDRESS='$PRODUCTION_DOMAIN' &&
+        export HOSTNAME='$PRODUCTION_HOST' &&
+        export GRAFANA_USERNAME='$SECURE_GRAFANA_USERNAME' &&
+        export GRAFANA_PASSWORD='$SECURE_GRAFANA_PASSWORD' &&
+        export ACME_EMAIL='$SECURE_ACME_EMAIL' &&
+        export WEB_AUTH_USER='$WEB_AUTH_USER' &&
+        export WEB_AUTH_PASS='$WEB_AUTH_PASS' &&
+        export SLACK_WEBHOOK_URL='$SECURE_SLACK_WEBHOOK_URL' &&
         
-        # Export GitLab variables for envsubst
-        export VM_IP="$PRODUCTION_VM_IP"
-        export DOMAIN_ADDRESS="$PRODUCTION_DOMAIN"
-        export HOSTNAME="$PRODUCTION_HOST"
-        export GRAFANA_USERNAME="$SECURE_GRAFANA_USERNAME"
-        export GRAFANA_PASSWORD="$SECURE_GRAFANA_PASSWORD"
-        export ACME_EMAIL="$SECURE_ACME_EMAIL"
-        export WEB_AUTH_USER="$WEB_AUTH_USER"
-        export WEB_AUTH_PASS="$WEB_AUTH_PASS"
-        export SLACK_WEBHOOK_URL="$SECURE_SLACK_WEBHOOK_URL"
+        echo '📝 Generating environment file...' &&
+        envsubst < .env.example > .env &&
         
-        # Generate .env with GitLab variables
-        envsubst < .env.example > .env
+        echo '🐳 Checking Docker installation...' &&
+        if ! command -v docker > /dev/null; then echo 'Docker not found!' && exit 1; fi &&
         
-        echo "🐳 Checking Docker and Docker Compose..."
-        if ! command -v docker &> /dev/null; then
-          echo "❌ Docker not installed. Please install Docker first!"
-          exit 1
-        fi
-        
-        if ! command -v docker-compose &> /dev/null; then
-          echo "📦 Installing Docker Compose..."
-          curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        echo '📦 Ensuring Docker Compose is available...' &&
+        if ! command -v docker-compose > /dev/null; then 
+          echo 'Installing Docker Compose...' &&
+          curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose &&
           chmod +x /usr/local/bin/docker-compose
-        fi
+        fi &&
         
-        echo "🐳 Restarting containers..."
-        docker-compose down
-        docker-compose pull
-        docker-compose up -d
+        echo '🐳 Restarting monitoring stack...' &&
+        docker-compose down &&
+        docker-compose pull &&
+        docker-compose up -d &&
         
-        echo "✅ Deployment completed!"
+        echo '✅ Deployment completed!' &&
         docker-compose ps
-      EOF
+        "
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
