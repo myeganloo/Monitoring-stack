@@ -38,12 +38,15 @@ deploy:production:
     - chmod 700 ~/.ssh
     - |
       ssh -o StrictHostKeyChecking=no -p 8090 root@${PRODUCTION_VM_IP} "
-        ${REGISTRY_LOGIN} &&
+        echo 'Starting deployment...' &&
         mkdir -p /opt/monitoring &&
         cd /opt/monitoring &&
         
-        echo '� Docker login with CI token...' &&
-        docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY &&
+        echo 'Running registry login if provided...' &&
+        eval \${REGISTRY_LOGIN:-true} &&
+        
+        echo '🐳 Docker login with CI token...' &&
+        docker login -u gitlab-ci-token -p \$CI_JOB_TOKEN \$CI_REGISTRY &&
         
         echo '🔍 Checking if git repo exists...' &&
         if [ ! -d '.git' ]; then
