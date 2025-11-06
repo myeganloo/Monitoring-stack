@@ -10,6 +10,7 @@ variables:
 # GitLab CI/CD Variables configured:
 # PRODUCTION_VM_IP - Production server IP address (protected)
 # SSH_PRIVATE_KEY_RUNNER - SSH private key for server access (masked)
+# GITLAB_CI_TOKEN - GitLab CI token for private repo access (masked)
 # PRODUCTION_DOMAIN - Production domain (protected/masked/expanded)
 # PRODUCTION_HOST - Production hostname (protected)
 # SECURE_GRAFANA_USERNAME - Grafana admin username (protected/masked)
@@ -39,17 +40,22 @@ deploy:production:
     - echo "🔍 Adding SSH host key for port 8090..."
     - ssh-keyscan -p 8090 -H $PRODUCTION_VM_IP >> ~/.ssh/known_hosts || echo "StrictHostKeyChecking no" >> ~/.ssh/config
     - |
-      ssh -p 8090 root@$PRODUCTION_VM_IP << 'EOF'
+      ssh -p 8090 root@$PRODUCTION_VM_IP << EOF
         echo "📁 Setting up monitoring directory..."
         mkdir -p /opt/monitoring
         cd /opt/monitoring
         
+        echo "🔍 Configuring Git authentication..."
+        git config --global credential.helper store
+        echo "https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com" > ~/.git-credentials
+        
         echo "🔍 Checking if git repo exists..."
         if [ ! -d ".git" ]; then
-          echo "📥 Cloning repository..."
-          git clone https://gitlab.com/rahyar/monitoring.git .
+          echo "📥 Cloning repository with CI token..."
+          git clone https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git .
         else
-          echo "🔄 Pulling latest code..."
+          echo "🔄 Pulling latest code with CI token..."
+          git remote set-url origin https://gitlab-ci-token:$GITLAB_CI_TOKEN@gitlab.com/rahyar/monitoring.git
           git pull origin main
         fi
         
@@ -64,15 +70,15 @@ deploy:production:
         fi
         
         # Export GitLab variables for envsubst
-        export VM_IP="${PRODUCTION_VM_IP}"
-        export DOMAIN_ADDRESS="${PRODUCTION_DOMAIN}"
-        export HOSTNAME="${PRODUCTION_HOST}"
-        export GRAFANA_USERNAME="${SECURE_GRAFANA_USERNAME}"
-        export GRAFANA_PASSWORD="${SECURE_GRAFANA_PASSWORD}"
-        export ACME_EMAIL="${SECURE_ACME_EMAIL}"
-        export WEB_AUTH_USER="${WEB_AUTH_USER}"
-        export WEB_AUTH_PASS="${WEB_AUTH_PASS}"
-        export SLACK_WEBHOOK_URL="${SECURE_SLACK_WEBHOOK_URL}"
+        export VM_IP="$PRODUCTION_VM_IP"
+        export DOMAIN_ADDRESS="$PRODUCTION_DOMAIN"
+        export HOSTNAME="$PRODUCTION_HOST"
+        export GRAFANA_USERNAME="$SECURE_GRAFANA_USERNAME"
+        export GRAFANA_PASSWORD="$SECURE_GRAFANA_PASSWORD"
+        export ACME_EMAIL="$SECURE_ACME_EMAIL"
+        export WEB_AUTH_USER="$WEB_AUTH_USER"
+        export WEB_AUTH_PASS="$WEB_AUTH_PASS"
+        export SLACK_WEBHOOK_URL="$SECURE_SLACK_WEBHOOK_URL"
         
         # Generate .env with GitLab variables
         envsubst < .env.example > .env
@@ -88,7 +94,7 @@ deploy:production:
           curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           chmod +x /usr/local/bin/docker-compose
         fi
-        cd observability/observability-full-stack
+        
         echo "🐳 Restarting containers..."
         docker-compose down
         docker-compose pull
