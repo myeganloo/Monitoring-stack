@@ -3,7 +3,7 @@
 ## ✅ **Webhook URL Verified**
 Your Slack webhook is working correctly:
 ```
-https://hooks.slack.com/services/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
+https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 ## 🔐 **GitLab CI/CD Variable Setup**
@@ -13,7 +13,7 @@ Add these to your GitLab project: **Settings** → **CI/CD** → **Variables**
 
 ```bash
 # Slack Configuration (Masked & Protected)
-SECURE_SLACK_WEBHOOK_URL = https://hooks.slack.com/services/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
+SECURE_SLACK_WEBHOOK_URL = https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 **Variable Settings:**
@@ -25,7 +25,7 @@ SECURE_SLACK_WEBHOOK_URL = https://hooks.slack.com/services/T09R28B6WB0/B09RH89J
 
 ### **Test Basic Webhook:**
 ```bash
-curl -X POST --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"AlertManager\", \"text\": \"✅ Webhook configuration test successful!\", \"icon_emoji\": \":white_check_mark:\"}" https://hooks.slack.com/services/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
+curl -X POST --data-urlencode "payload={\"channel\": \"#alerts\", \"username\": \"AlertManager\", \"text\": \"✅ Webhook configuration test successful!\", \"icon_emoji\": \":white_check_mark:\"}" https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 ### **Test AlertManager Format:**
@@ -47,7 +47,7 @@ curl -X POST -H 'Content-type: application/json' --data '{
       ]
     }
   ]
-}' https://hooks.slack.com/services/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
+}' https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
 ## 🚀 **Deployment Process**
@@ -64,7 +64,7 @@ git push origin main
 1. Go to GitLab project → Settings → CI/CD → Variables
 2. Click "Add Variable"
 3. Key: `SECURE_SLACK_WEBHOOK_URL`
-4. Value: `https://hooks.slack.com/services/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`
+4. Value: `https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX`
 5. Check: ✅ Masked ✅ Protected
 6. Click "Add Variable"
 
