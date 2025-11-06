@@ -54,7 +54,10 @@ deploy:production:
           git clone https://gitlab-ci-token:$CI_JOB_TOKEN@gitlab.com/rahyar/monitoring.git .
         else
           echo '� Pulling latest code...' &&
-          git pull origin main
+          git reset --hard &&
+          git pull --force  
+          
+
         fi &&
         
         echo '📁 Going to observability stack directory...' &&
