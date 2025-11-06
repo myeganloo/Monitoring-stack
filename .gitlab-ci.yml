@@ -52,7 +52,7 @@ deploy:production:
           cd monitoring &&
           git reset --hard &&
           git pull --force
-        fi &&
+        fi
 
         echo '📁 Going to observability stack directory...' &&
         cd observability/observability-full-stack &&
