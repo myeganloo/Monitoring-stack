@@ -20,12 +20,38 @@ deploy:production:
   stage: deploy
   script:
     - echo "🚀 Deploying to production server..."
-    - echo "🔍 Connecting to ${PRODUCTION_VM_IP}"
+    - echo "� Preparing .env file from .env.example..."
+    
+    # Copy .env.example and replace with sed
+    - cp observability/observability-full-stack/.env.example .env
+    - echo "� Replacing variables with sed..."
+    - sed -i "s/^VM_IP=VM_IP$/VM_IP=${PRODUCTION_VM_IP}/g" .env
+    - sed -i "s/^DOMAIN_ADDRESS=DOMAIN_ADDRESS$/DOMAIN_ADDRESS=${PRODUCTION_DOMAIN}/g" .env  
+    - sed -i "s/^HOSTNAME=observability-production$/HOSTNAME=${PRODUCTION_HOST}/g" .env
+    - sed -i "s/^GRAFANA_USERNAME=GRAFANA_USERNAME$/GRAFANA_USERNAME=${SECURE_GRAFANA_USERNAME}/g" .env
+    - sed -i "s/^GRAFANA_PASSWORD=GRAFANA_PASSWORD$/GRAFANA_PASSWORD=${SECURE_GRAFANA_PASSWORD}/g" .env
+    - sed -i "s/^ACME_EMAIL=ACME_EMAIL$/ACME_EMAIL=${SECURE_ACME_EMAIL}/g" .env
+    - sed -i "s/^WEB_AUTH_USER=WEB_AUTH_USER$/WEB_AUTH_USER=${WEB_AUTH_USER}/g" .env
+    - sed -i "s/^WEB_AUTH_PASS=WEB_AUTH_PASS$/WEB_AUTH_PASS=${WEB_AUTH_PASS}/g" .env
+    - sed -i "s|^SLACK_WEBHOOK_URL=SLACK_WEBHOOK_URL$|SLACK_WEBHOOK_URL=${SECURE_SLACK_WEBHOOK_URL}|g" .env
+    
+    - echo "✅ .env file ready. Content preview:"
+    - head -15 .env
+    
+    # SSH setup
+    - echo "🔗 Setting up SSH connection..."
     - 'command -v ssh-agent >/dev/null || ( apk add --no-cache openssh-client )'
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY_RUNNER" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
+    
+    # Copy .env file to server
+    - echo "📤 Copying .env file to server..."
+    - scp -o StrictHostKeyChecking=no -P 8090 .env root@${PRODUCTION_VM_IP}:/tmp/monitoring.env
+    
+    # Deploy to server
+    - echo "🚀 Deploying to ${PRODUCTION_VM_IP}..."
     - |
       ssh -o StrictHostKeyChecking=no -p 8090 root@${PRODUCTION_VM_IP} "
         echo 'Starting deployment...' &&
@@ -49,57 +75,22 @@ deploy:production:
         # Go to observability stack
         cd monitoring/observability/observability-full-stack &&
         
-        # Create .env file and replace variables with sed
-        echo 'Creating .env file from template...' &&
-        cp .env.example .env &&
+        # Copy the prepared .env file
+        echo 'Using prepared .env file from GitLab CI...' &&
+        cp /tmp/monitoring.env .env &&
         
-        echo '🔍 Debug: Checking GitLab CI variables...' &&
-        echo \"PRODUCTION_VM_IP: '\${PRODUCTION_VM_IP}' (length: \${#PRODUCTION_VM_IP})\" &&
-        echo \"PRODUCTION_DOMAIN: '\${PRODUCTION_DOMAIN}' (length: \${#PRODUCTION_DOMAIN})\" &&
-        echo \"PRODUCTION_HOST: '\${PRODUCTION_HOST}' (length: \${#PRODUCTION_HOST})\" &&
-        echo \"SECURE_GRAFANA_USERNAME: '\${SECURE_GRAFANA_USERNAME}' (length: \${#SECURE_GRAFANA_USERNAME})\" &&
-        echo \"WEB_AUTH_USER: '\${WEB_AUTH_USER}' (length: \${#WEB_AUTH_USER})\" &&
-        echo \"CI_COMMIT_BRANCH: '\${CI_COMMIT_BRANCH}'\" &&
-        echo \"CI_ENVIRONMENT_NAME: '\${CI_ENVIRONMENT_NAME}'\" &&
-        
-        echo 'Setting fallback values for empty variables...' &&
-        VM_IP_VAL=\${PRODUCTION_VM_IP:-192.168.80.25} &&
-        DOMAIN_VAL=\${PRODUCTION_DOMAIN:-monlog.erahyar.com} &&
-        HOST_VAL=\${PRODUCTION_HOST:-observability-production} &&
-        GRAFANA_USER_VAL=\${SECURE_GRAFANA_USERNAME:-admin} &&
-        GRAFANA_PASS_VAL=\${SECURE_GRAFANA_PASSWORD:-defaultpassword} &&
-        ACME_EMAIL_VAL=\${SECURE_ACME_EMAIL:-admin@erahyar.com} &&
-        WEB_USER_VAL=\${WEB_AUTH_USER:-admin} &&
-        WEB_PASS_VAL=\${WEB_AUTH_PASS:-defaultpass} &&
-        SLACK_URL_VAL=\${SECURE_SLACK_WEBHOOK_URL:-https://hooks.slack.com/services/DEFAULT/WEBHOOK} &&
-        
-        echo \"Using values: VM_IP=\$VM_IP_VAL, DOMAIN=\$DOMAIN_VAL, HOST=\$HOST_VAL\" &&
-        
-        echo 'Replacing variables with values (GitLab CI or fallbacks)...' &&
-        sed -i \"s/^VM_IP=VM_IP\\\$/VM_IP=\$VM_IP_VAL/g\" .env &&
-        sed -i \"s/^DOMAIN_ADDRESS=DOMAIN_ADDRESS\\\$/DOMAIN_ADDRESS=\$DOMAIN_VAL/g\" .env &&
-        sed -i \"s/^HOSTNAME=observability-production\\\$/HOSTNAME=\$HOST_VAL/g\" .env &&
-        sed -i \"s/^GRAFANA_USERNAME=GRAFANA_USERNAME\\\$/GRAFANA_USERNAME=\$GRAFANA_USER_VAL/g\" .env &&
-        sed -i \"s/^GRAFANA_PASSWORD=GRAFANA_PASSWORD\\\$/GRAFANA_PASSWORD=\$GRAFANA_PASS_VAL/g\" .env &&
-        sed -i \"s/^ACME_EMAIL=ACME_EMAIL\\\$/ACME_EMAIL=\$ACME_EMAIL_VAL/g\" .env &&
-        sed -i \"s/^WEB_AUTH_USER=WEB_AUTH_USER\\\$/WEB_AUTH_USER=\$WEB_USER_VAL/g\" .env &&
-        sed -i \"s/^WEB_AUTH_PASS=WEB_AUTH_PASS\\\$/WEB_AUTH_PASS=\$WEB_PASS_VAL/g\" .env &&
-        sed -i \"s|^SLACK_WEBHOOK_URL=SLACK_WEBHOOK_URL\\\$|SLACK_WEBHOOK_URL=\$SLACK_URL_VAL|g\" .env &&
-        
-        echo 'Checking .env file after sed replacements...' &&
-        echo '=== Key variables in .env ===' &&
-        grep -E '^(VM_IP|DOMAIN_ADDRESS|HOSTNAME|GRAFANA_USERNAME|GRAFANA_PASSWORD|ACME_EMAIL|WEB_AUTH_USER|WEB_AUTH_PASS|SLACK_WEBHOOK_URL)=' .env &&
-        echo '=== End of key variables ===' &&
+        echo 'Verifying .env file content...' &&
+        echo '=== .env file (first 15 lines) ===' &&
+        head -15 .env &&
+        echo '=== End of .env preview ===' &&
         
         echo 'Testing docker-compose config...' &&
         if docker-compose config --quiet; then
           echo 'Docker compose config is valid!' 
         else
-          echo 'Docker compose config has issues - checking for undefined variables...' &&
-          docker-compose config 2>&1 | head -20
+          echo 'Docker compose config has issues:' &&
+          docker-compose config 2>&1 | head -10
         fi &&
-        
-        echo 'Environment variables updated successfully!' &&
         
         # Restart containers
         echo '🐳 Restarting monitoring stack...' &&
