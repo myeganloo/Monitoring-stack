@@ -35,7 +35,7 @@ services:
       - --storage.tsdb.retention.size=150GB
       - --web.enable-lifecycle
     ports:
-      - "${VM_IP}:9090:9090"
+      - "9090:9090"
     networks:
       - web_net
       - app_net
@@ -58,7 +58,7 @@ services:
       - GF_LOG_LEVEL=critical
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
     ports:
-      - "${VM_IP}:3000:3000"
+      - "3000:3000"
     networks:
       - web_net
       - app_net
@@ -79,7 +79,7 @@ services:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
     ports:
-      - "${VM_IP}:9093:9093"
+      - "9093:9093"
     networks:
       - web_net
       - app_net
@@ -95,7 +95,7 @@ services:
     volumes:
       - pushgateway_data:/tmp/
     ports:
-      - "${VM_IP}:9091:9091"
+      - "9091:9091"
     networks:
       - web_net
       - app_net
@@ -153,7 +153,7 @@ services:
       - loki_data:/tmp/loki
       - ./loki:/etc/loki/
     ports:
-      - "${VM_IP}:3100:3100"
+      - "3100:3100"
     networks:
       - web_net
       - app_net
@@ -192,12 +192,12 @@ services:
       - ./tempo/tempo.yaml:/etc/tempo.yaml
       - tempo_data:/var/tempo
     ports:
-      - "${VM_IP}:14268:14268"   # jaeger ingest
-      - "${VM_IP}:3200:3200"     # tempo
-      - "${VM_IP}:9095:9095"     # tempo grpc
-      - "${VM_IP}:4317:4317"     # otlp grpc
-      - "${VM_IP}:4318:4318"     # otlp http
-      - "${VM_IP}:9411:9411"     # zipkin
+      - "14268:14268"   # jaeger ingest
+      - "3200:3200"     # tempo
+      - "9095:9095"     # tempo grpc
+      - "4317:4317"     # otlp grpc
+      - "4318:4318"     # otlp http
+      - "9411:9411"     # zipkin
     networks:
       - app_net
 

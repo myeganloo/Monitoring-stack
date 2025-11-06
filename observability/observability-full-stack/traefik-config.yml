@@ -3,7 +3,7 @@
 # Place this file in your Traefik's dynamic configuration directory or include it in your main traefik.yml
 #
 # Updated for VM deployment:
-# - VM IP: 192.168.80.25
+# - VM IP: 192.168.80.56
 # - Domain: monlog.erahyar.com
 # - Services accessible via IP:PORT or domain routing
 # - Basic auth configured with existing credentials
@@ -109,31 +109,31 @@ http:
     prometheus:
       loadBalancer:
         servers:
-          - url: "http://192.168.80.25:9090"
+          - url: "http://192.168.80.56:9090"
 
     # Grafana service
     grafana:
       loadBalancer:
         servers:
-          - url: "http://192.168.80.25:3000"
+          - url: "http://192.168.80.56:3000"
 
     # Alertmanager service
     alertmanager:
       loadBalancer:
         servers:
-          - url: "http://192.168.80.25:9093"
+          - url: "http://192.168.80.56:9093"
 
     # Pushgateway service
     pushgateway:
       loadBalancer:
         servers:
-          - url: "http://192.168.80.25:9091"
+          - url: "http://192.168.80.56:9091"
 
     # Loki service
     loki:
       loadBalancer:
         servers:
-          - url: "http://192.168.80.25:3100"
+          - url: "http://192.168.80.56:3100"
 
   middlewares:
     # HTTPS redirect middleware
