@@ -53,15 +53,36 @@ deploy:production:
         echo 'Creating .env file from template...' &&
         cp .env.example .env &&
         
+        echo 'Debug: Checking GitLab CI variables...' &&
+        echo \"PRODUCTION_VM_IP: '\${PRODUCTION_VM_IP}'\" &&
+        echo \"PRODUCTION_DOMAIN: '\${PRODUCTION_DOMAIN}'\" &&
+        echo \"PRODUCTION_HOST: '\${PRODUCTION_HOST}'\" &&
+        echo \"SECURE_GRAFANA_USERNAME: '\${SECURE_GRAFANA_USERNAME}'\" &&
+        echo \"WEB_AUTH_USER: '\${WEB_AUTH_USER}'\" &&
+        
         echo 'Replacing variables with GitLab CI values...' &&
         sed -i \"s/^VM_IP=VM_IP\\\$/VM_IP=\${PRODUCTION_VM_IP}/g\" .env &&
         sed -i \"s/^DOMAIN_ADDRESS=DOMAIN_ADDRESS\\\$/DOMAIN_ADDRESS=\${PRODUCTION_DOMAIN}/g\" .env &&
+        sed -i \"s/^HOSTNAME=observability-production\\\$/HOSTNAME=\${PRODUCTION_HOST}/g\" .env &&
         sed -i \"s/^GRAFANA_USERNAME=GRAFANA_USERNAME\\\$/GRAFANA_USERNAME=\${SECURE_GRAFANA_USERNAME}/g\" .env &&
         sed -i \"s/^GRAFANA_PASSWORD=GRAFANA_PASSWORD\\\$/GRAFANA_PASSWORD=\${SECURE_GRAFANA_PASSWORD}/g\" .env &&
         sed -i \"s/^ACME_EMAIL=ACME_EMAIL\\\$/ACME_EMAIL=\${SECURE_ACME_EMAIL}/g\" .env &&
         sed -i \"s/^WEB_AUTH_USER=WEB_AUTH_USER\\\$/WEB_AUTH_USER=\${WEB_AUTH_USER}/g\" .env &&
         sed -i \"s/^WEB_AUTH_PASS=WEB_AUTH_PASS\\\$/WEB_AUTH_PASS=\${WEB_AUTH_PASS}/g\" .env &&
         sed -i \"s|^SLACK_WEBHOOK_URL=SLACK_WEBHOOK_URL\\\$|SLACK_WEBHOOK_URL=\${SECURE_SLACK_WEBHOOK_URL}|g\" .env &&
+        
+        echo 'Checking .env file after sed replacements...' &&
+        echo '=== Key variables in .env ===' &&
+        grep -E '^(VM_IP|DOMAIN_ADDRESS|HOSTNAME|GRAFANA_USERNAME|GRAFANA_PASSWORD|ACME_EMAIL|WEB_AUTH_USER|WEB_AUTH_PASS|SLACK_WEBHOOK_URL)=' .env &&
+        echo '=== End of key variables ===' &&
+        
+        echo 'Testing docker-compose config...' &&
+        if docker-compose config --quiet; then
+          echo 'Docker compose config is valid!' 
+        else
+          echo 'Docker compose config has issues - checking for undefined variables...' &&
+          docker-compose config 2>&1 | head -20
+        fi &&
         
         echo 'Environment variables updated successfully!' &&
         
