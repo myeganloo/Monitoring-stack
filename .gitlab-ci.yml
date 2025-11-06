@@ -174,7 +174,7 @@ test:docker-compose:
       EOF
     - mv .env.test .env
     # Test configuration generation
-    #- ./generate-traefik-config.sh || echo "⚠️ Traefik config generation failed (expected in test)"
+    - ./generate-traefik-config.sh || echo "⚠️ Traefik config generation failed (expected in test)"
     # Test compose file
     - docker-compose config
     - echo "✅ Docker Compose test passed"
