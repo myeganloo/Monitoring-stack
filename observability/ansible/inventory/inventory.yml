@@ -22,9 +22,9 @@ all:
           monitoring_node_exporter_port: 19100
           monitoring_cadvisor_port: 18080
           # Optional: generate file_sd targets and reload central Prometheus
-          # monitoring_prometheus_file_sd_dir: /opt/monitoring-stack/observability/observability-full-stack/prometheus/file_sd/targets
-          # monitoring_prometheus_delegate_host: monitoring-server.example.com
-          # monitoring_prometheus_reload_url: http://localhost:9090/-/reload
+          monitoring_prometheus_file_sd_dir: ../observability-full-stack/prometheus/file_sd/targets
+          monitoring_prometheus_delegate_host: metrics.monlog.erahyar.com
+          monitoring_prometheus_reload_url: http://192.168.80.56:9090/-/reload
           # Optional: auto-commit and push changes to git repository
           # monitoring_git_auto_push: true
           # monitoring_git_repo_path: /opt/monitoring-stack

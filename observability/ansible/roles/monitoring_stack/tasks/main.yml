@@ -78,49 +78,4 @@
     state: present
     remove_orphans: true
 
-- name: Ensure Prometheus file_sd dir exists on delegate (optional)
-  when:
-    - monitoring_prometheus_file_sd_dir is defined
-    - monitoring_prometheus_delegate_host is defined
-  file:
-    path: "{{ monitoring_prometheus_file_sd_dir }}"
-    state: directory
-    mode: '0755'
-  delegate_to: "{{ monitoring_prometheus_delegate_host }}"
-
-- name: Ensure Prometheus file_sd dir exists on target (optional)
-  when:
-    - monitoring_prometheus_file_sd_dir is defined
-    - monitoring_prometheus_delegate_host is not defined
-  file:
-    path: "{{ monitoring_prometheus_file_sd_dir }}"
-    state: directory
-    mode: '0755'
-
-- name: Render Prometheus file_sd for this host on delegate (optional)
-  when:
-    - monitoring_prometheus_file_sd_dir is defined
-    - monitoring_prometheus_delegate_host is defined
-  template:
-    src: prometheus-file-sd.json.j2
-    dest: "{{ monitoring_prometheus_file_sd_dir }}/{{ inventory_hostname }}.json"
-    mode: '0644'
-  delegate_to: "{{ monitoring_prometheus_delegate_host }}"
-  notify: 
-    - Trigger central Prometheus reload
-    - Commit and push git changes
-  register: file_sd_delegate_result
-
-- name: Render Prometheus file_sd for this host on target (optional)
-  when:
-    - monitoring_prometheus_file_sd_dir is defined
-    - monitoring_prometheus_delegate_host is not defined
-  template:
-    src: prometheus-file-sd.json.j2
-    dest: "{{ monitoring_prometheus_file_sd_dir }}/{{ inventory_hostname }}.json"
-    mode: '0644'
-  notify: 
-    - Trigger central Prometheus reload
-    - Commit and push git changes
-  register: file_sd_target_result
 
