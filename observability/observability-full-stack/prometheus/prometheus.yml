@@ -86,10 +86,10 @@ scrape_configs:
     static_configs:
       - targets: [ 'loki:3100' ]
   
-  - job_name: 'remote-node-exporter'
+  - job_name: 'rahyar-stage'
     static_configs:
       - targets: ['192.168.80.53:19100']
 
-  - job_name: 'remote-cadvisor'
+  - job_name: 'rahyar-stage'
     static_configs:
       - targets: ['192.168.80.53:18080']    
