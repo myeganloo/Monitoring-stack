@@ -96,24 +96,28 @@ scrape_configs:
           server: '{{ inventory_hostname }}'
           type: host
 
-  - job_name: 'remote-node-exporter'
+{% for server in monitoring_remote_servers %}
+  - job_name: 'remote-node-exporter-{{ server.name }}'
     static_configs:
-      - targets: ['192.168.80.53:19100']
+      - targets: ['{{ server.ip }}:{{ server.node_port }}']
         labels:
-          server: rahyar-stage
+          server: '{{ server.name }}'
           type: container
 
-  - job_name: 'remote-cadvisor'
+  - job_name: 'remote-cadvisor-{{ server.name }}'
     static_configs:
-      - targets: ['192.168.80.53:18080']
+      - targets: ['{{ server.ip }}:{{ server.cadvisor_port }}']
         labels:
-          server: rahyar-stage
+          server: '{{ server.name }}'
           type: container
 
-  - job_name: 'remote-traefik'
+{% if server.traefik_port is defined %}
+  - job_name: 'remote-traefik-{{ server.name }}'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['192.168.80.54:8082']
+      - targets: ['{{ server.ip }}:{{ server.traefik_port }}']
         labels:
-          server: traefik-server
+          server: '{{ server.name }}'
           type: service
+{% endif %}
+{% endfor %}

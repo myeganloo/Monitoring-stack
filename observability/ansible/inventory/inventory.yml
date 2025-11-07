@@ -1,31 +1,24 @@
 all:
   children:
     monitoring_targets:
-      hosts:
-        rahyar-stage:
-          monitoring_project_dir: /opt/services/monitoring
-          monitoring_restart_policy: unless-stopped
-          monitoring_app_network: app_net
-          monitoring_web_network: web_net
-          monitoring_cadvisor_image: docker.io/ahmadrafiee/cadvisor
-          monitoring_node_exporter_image: prom/node-exporter:v1.9.1
-          monitoring_promtail_image: grafana/promtail:3.5
-          monitoring_promtail_http_listen_port: 9080
-          monitoring_promtail_positions_file: /tmp/positions.yaml
-          monitoring_loki_push_url: "https://192.168.80.56:3100/api/prom/push"
-          monitoring_promtail_system_job: stages_varlogs
-          monitoring_promtail_system_paths:
-            - /var/log/*.log
-          monitoring_promtail_container_label: stages_varlogs_container
-          # Optional: publish host ports for Prometheus scraping
-          monitoring_publish_ports: true
-          monitoring_node_exporter_port: 19100
-          monitoring_cadvisor_port: 18080
-          # Optional: generate file_sd targets and reload central Prometheus
-          monitoring_prometheus_file_sd_dir: ../observability-full-stack/prometheus/file_sd/targets
-          monitoring_prometheus_delegate_host: metrics.monlog.erahyar.com
-          monitoring_prometheus_reload_url: http://192.168.80.56:9090/-/reload
-          # Optional: auto-commit and push changes to git repository
-          # monitoring_git_auto_push: true
-          # monitoring_git_repo_path: /opt/monitoring-stack
-          # monitoring_git_branch: main
+      vars:     
+        monitoring_project_dir: /opt/services/monitoring
+        monitoring_restart_policy: unless-stopped
+        monitoring_app_network: app_net
+        monitoring_web_network: web_net
+        monitoring_cadvisor_image: docker.io/ahmadrafiee/cadvisor
+        monitoring_node_exporter_image: prom/node-exporter:v1.9.1
+        monitoring_promtail_image: grafana/promtail:3.5
+        monitoring_promtail_http_listen_port: 9080
+        monitoring_promtail_positions_file: /tmp/positions.yaml
+        monitoring_loki_push_url: "https://192.168.80.56:3100/api/prom/push"
+        monitoring_promtail_system_job: stages_varlogs
+        monitoring_promtail_system_paths:
+          - /var/log/*.log
+        monitoring_publish_ports: true
+        monitoring_node_exporter_port: 19100
+        monitoring_cadvisor_port: 18080
+        monitoring_prometheus_file_sd_dir: ../observability-full-stack/prometheus/file_sd/targets
+        monitoring_prometheus_delegate_host: metrics.monlog.erahyar.com
+        monitoring_prometheus_reload_url: http://192.168.80.56:9090/-/reload
+      
