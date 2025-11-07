@@ -18,7 +18,7 @@ datasources:
   type: loki
   access: proxy
   url: http://loki:3100
-  orgId: 2
+  orgId: 1
   editable: true
   isDefault: false
   jsonData:
@@ -32,7 +32,7 @@ datasources:
 - name: Tempo
   type: tempo
   access: proxy
-  orgId: 3
+  orgId: 1
   url: http://tempo:3200
   basicAuth: false
   isDefault: false
@@ -42,6 +42,6 @@ datasources:
   jsonData:
     httpMethod: GET
     serviceMap:
-      datasourceUid: Prometheus
+      datasourceUid: prometheus
     streamingEnabled:
       search: true
