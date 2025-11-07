@@ -89,7 +89,6 @@ scrape_configs:
           server: rahyar-stage
           type: service
 
-  
   - job_name: 'remote-node-exporter'
     static_configs:
       - targets: ['192.168.80.53:19100']
@@ -103,3 +102,11 @@ scrape_configs:
         labels:
           server: rahyar-stage
           type: container
+
+  - job_name: 'remote-traefik'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['192.168.80.54:8082']
+        labels:
+          server: traefik-server
+          type: service
