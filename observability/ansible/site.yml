@@ -1,0 +1,8 @@
+---
+- name: Deploy monitoring stack
+  hosts: monitoring_targets
+  become: true
+  gather_facts: true
+
+  roles:
+    - monitoring_stack

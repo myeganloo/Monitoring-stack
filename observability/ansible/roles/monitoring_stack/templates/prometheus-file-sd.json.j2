@@ -1,0 +1,18 @@
+[
+  {
+    "targets": [
+      {% if monitoring_publish_ports | default(false) %}
+      "{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}:{{ monitoring_node_exporter_port | default(9100) }}",
+      "{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}:{{ monitoring_cadvisor_port | default(8080) }}"
+      {% else %}
+      "node-exporter:9100",
+      "cadvisor:8080"
+      {% endif %}
+    ],
+    "labels": {
+      "job": "{{ monitoring_prometheus_job_label | default('node_and_cadvisor') }}",
+      "instance": "{{ inventory_hostname }}",
+      "host": "{{ inventory_hostname }}"
+    }
+  }
+]

@@ -19,6 +19,7 @@ datasources:
   access: proxy
   url: http://loki:3100
   orgId: 1
+  uid: loki
   editable: true
   isDefault: false
   jsonData:

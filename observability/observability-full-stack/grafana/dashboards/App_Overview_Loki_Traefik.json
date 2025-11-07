@@ -1,0 +1,89 @@
+{
+  "title": "App Overview (Loki + Traefik)",
+  "uid": "app-overview-loki-traefik",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["app", "overview", "loki", "traefik"],
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "app",
+        "type": "query",
+        "label": "App (Loki label)",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values(app)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": ["$__all"] }
+      },
+      {
+        "name": "service",
+        "type": "query",
+        "label": "Traefik service",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(traefik_service_requests_total, service)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": ["$__all"] }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Error rate (Loki)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (app) (rate({app=~\"$app\"} |= \"ERROR\" [5m]))",
+          "legendFormat": "{{app}}"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Top error messages (Loki)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(5, sum by (msg) (rate({app=~\"$app\"} |= \"ERROR\" [5m])))",
+          "legendFormat": "{{msg}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "4xx / 5xx rate (Traefik)",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code) (rate(traefik_service_requests_total{code=~\"4..|5..\",service=~\"$service\"}[5m]))",
+          "legendFormat": "{{code}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency p90 (Traefik)",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.9, sum by (service, le) (rate(traefik_service_request_duration_seconds_bucket{service=~\"$service\"}[5m])))",
+          "legendFormat": "p90"
+        }
+      ]
+    }
+  ]
+}

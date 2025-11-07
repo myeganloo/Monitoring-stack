@@ -1,0 +1,58 @@
+{
+  "title": "Edge & Uptime (Traefik + Blackbox)",
+  "uid": "edge-uptime",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["uptime", "traefik", "blackbox"],
+  "time": { "from": "now-24h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "target",
+        "type": "query",
+        "label": "Blackbox target",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(probe_success, instance)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": ["$__all"] }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Uptime % (last 24h)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{
+        "refId": "A",
+        "expr": "avg_over_time(probe_success{instance=~\"$target\"}[24h]) * 100"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP 4xx/5xx (Traefik)",
+      "gridPos": { "x": 6, "y": 0, "w": 18, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{
+        "refId": "A",
+        "expr": "sum by (code) (rate(traefik_service_requests_total{code=~\"4..|5..\"}[5m]))",
+        "legendFormat": "{{code}}"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Blackbox latency (ms)",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{
+        "refId": "A",
+        "expr": "histogram_quantile(0.9, sum by (le) (rate(probe_duration_seconds_bucket{instance=~\"$target\"}[5m]))) * 1000",
+        "legendFormat": "p90"
+      }]
+    }
+  ]
+}

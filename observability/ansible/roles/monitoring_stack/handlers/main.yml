@@ -1,0 +1,45 @@
+---
+- name: Trigger central Prometheus reload
+  when: monitoring_prometheus_reload_url is defined
+  uri:
+    url: "{{ monitoring_prometheus_reload_url }}"
+    method: POST
+    status_code: [200]
+    return_content: false
+
+# - name: Recreate monitoring stack
+#   community.docker.docker_compose_v2:
+#     project_src: "{{ monitoring_project_dir }}"
+#     state: present
+#     build: false
+#     remove_orphans: true
+
+- name: Restart promtail
+  community.docker.docker_container:
+    name: promtail
+    restart: true
+    state: started
+
+- name: Commit and push git changes
+  when: 
+    - monitoring_git_repo_path is defined
+    - monitoring_git_auto_push | default(false)
+  block:
+    - name: Add changes to git
+      ansible.builtin.shell:
+        cmd: git add {{ monitoring_prometheus_file_sd_dir | dirname }}/
+        chdir: "{{ monitoring_git_repo_path }}"
+      delegate_to: "{{ monitoring_prometheus_delegate_host | default(inventory_hostname) }}"
+      
+    - name: Commit changes
+      ansible.builtin.shell:
+        cmd: |
+          git commit -m "Auto-update monitoring targets for {{ inventory_hostname }}" || true
+        chdir: "{{ monitoring_git_repo_path }}"
+      delegate_to: "{{ monitoring_prometheus_delegate_host | default(inventory_hostname) }}"
+      
+    - name: Push changes to remote
+      ansible.builtin.shell:
+        cmd: git push origin {{ monitoring_git_branch | default('main') }}
+        chdir: "{{ monitoring_git_repo_path }}"
+      delegate_to: "{{ monitoring_prometheus_delegate_host | default(inventory_hostname) }}"

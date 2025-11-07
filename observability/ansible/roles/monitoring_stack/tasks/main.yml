@@ -1,0 +1,126 @@
+---
+# - name: Ensure required packages present (Debian/Ubuntu)
+#   apt:
+#     name:
+#       - docker.io
+#       - docker-compose-plugin
+#     update_cache: true
+#     state: present
+#   when: ansible_os_family == 'Debian'
+
+# - name: Ensure required packages present (RHEL/CentOS/Rocky/Alma)
+#   yum:
+#     name:
+#       - docker
+#       - docker-compose-plugin
+#     state: present
+#   when: ansible_os_family == 'RedHat'
+
+# - name: Ensure Docker service is enabled and started
+#   service:
+#     name: docker
+#     state: started
+#     enabled: true
+
+- name: Create project directory
+  file:
+    path: "{{ monitoring_project_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create promtail config directory
+  file:
+    path: "{{ monitoring_project_dir }}/promtail"
+    state: directory
+    mode: '0755'
+
+- name: Deploy compose.yml
+  template:
+    src: compose.yml.j2
+    dest: "{{ monitoring_project_dir }}/compose.yml"
+    mode: '0644'
+  notify: Recreate monitoring stack
+
+- name: Deploy promtail config
+  template:
+    src: promtail.yml.j2
+    dest: "{{ monitoring_project_dir }}/promtail/promtail.yml"
+    mode: '0644'
+  notify: Restart promtail
+
+- name: Deploy .env file
+  copy:
+    dest: "{{ monitoring_project_dir }}/.env"
+    content: |
+      RESTART_POLICY={{ monitoring_restart_policy }}
+      HOSTNAME={{ inventory_hostname }}
+    mode: '0644'
+
+- name: Ensure external networks exist (app_net)
+  community.docker.docker_network:
+    name: "{{ monitoring_app_network }}"
+    state: present
+
+- name: Ensure external networks exist (web_net)
+  community.docker.docker_network:
+    name: "{{ monitoring_web_network }}"
+    state: present
+
+- name: Pull images
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_project_dir }}"
+    state: present
+    pull: always
+
+- name: Bring up stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_project_dir }}"
+    state: present
+    remove_orphans: true
+
+- name: Ensure Prometheus file_sd dir exists on delegate (optional)
+  when:
+    - monitoring_prometheus_file_sd_dir is defined
+    - monitoring_prometheus_delegate_host is defined
+  file:
+    path: "{{ monitoring_prometheus_file_sd_dir }}"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ monitoring_prometheus_delegate_host }}"
+
+- name: Ensure Prometheus file_sd dir exists on target (optional)
+  when:
+    - monitoring_prometheus_file_sd_dir is defined
+    - monitoring_prometheus_delegate_host is not defined
+  file:
+    path: "{{ monitoring_prometheus_file_sd_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Render Prometheus file_sd for this host on delegate (optional)
+  when:
+    - monitoring_prometheus_file_sd_dir is defined
+    - monitoring_prometheus_delegate_host is defined
+  template:
+    src: prometheus-file-sd.json.j2
+    dest: "{{ monitoring_prometheus_file_sd_dir }}/{{ inventory_hostname }}.json"
+    mode: '0644'
+  delegate_to: "{{ monitoring_prometheus_delegate_host }}"
+  notify: 
+    - Trigger central Prometheus reload
+    - Commit and push git changes
+  register: file_sd_delegate_result
+
+- name: Render Prometheus file_sd for this host on target (optional)
+  when:
+    - monitoring_prometheus_file_sd_dir is defined
+    - monitoring_prometheus_delegate_host is not defined
+  template:
+    src: prometheus-file-sd.json.j2
+    dest: "{{ monitoring_prometheus_file_sd_dir }}/{{ inventory_hostname }}.json"
+    mode: '0644'
+  notify: 
+    - Trigger central Prometheus reload
+    - Commit and push git changes
+  register: file_sd_target_result
+

@@ -1,0 +1,39 @@
+{
+  "title": "PHP-FPM Health",
+  "uid": "php-fpm-health",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["php", "fpm", "laravel"],
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Active Processes",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(phpfpm_processes{state=\"active\"})" }]
+    },
+    {
+      "type": "stat",
+      "title": "Max Children Reached",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(phpfpm_max_children_reached)" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests per second",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(phpfpm_requests[5m]))" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Slow requests",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "refId": "A", "expr": "sum(rate(phpfpm_slow_requests[5m]))" }]
+    }
+  ]
+}

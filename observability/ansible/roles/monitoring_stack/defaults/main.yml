@@ -1,0 +1,28 @@
+---
+# Whether to publish host ports for exporters (for central Prometheus scraping)
+monitoring_publish_ports: false
+
+# Default ports used when publishing
+monitoring_node_exporter_port: 9100
+monitoring_cadvisor_port: 8080
+
+# Optional: directory on control or managed node to drop file_sd JSON
+# Example: /etc/prometheus/file_sd/targets
+# monitoring_prometheus_file_sd_dir:
+
+# Optional: URL to POST for Prometheus reload (e.g., http://prometheus:9090/-/reload)
+# monitoring_prometheus_reload_url:
+
+# Optional: Job label in generated file_sd
+monitoring_prometheus_job_label: node_and_cadvisor
+
+# Optional: custom promtail container pipeline stages (YAML fragment)
+# monitoring_promtail_container_pipeline:
+
+# Optional: delegate host to write file_sd files (e.g., the Prometheus server)
+# monitoring_prometheus_delegate_host:
+
+# Git integration for auto-commit/push of monitoring changes
+monitoring_git_auto_push: false
+# monitoring_git_repo_path: /path/to/monitoring/git/repo
+# monitoring_git_branch: main
