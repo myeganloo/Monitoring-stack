@@ -85,11 +85,24 @@ scrape_configs:
   - job_name: 'loki'
     static_configs:
       - targets: [ 'loki:3100' ]
-  
-  - job_name: 'rahyar-node-exporter'
+
+  - job_name: 'host-node-exporter'
+    static_configs:
+      - targets: ['192.168.80.53:9100']
+        labels:
+          server: rahyar-stage
+          type: host
+
+  - job_name: 'remote-node-exporter'
     static_configs:
       - targets: ['192.168.80.53:19100']
+        labels:
+          server: rahyar-stage
+          type: container
 
-  - job_name: 'rahyar-cadvisor'
+  - job_name: 'remote-cadvisor'
     static_configs:
-      - targets: ['192.168.80.53:18080']    
+      - targets: ['192.168.80.53:18080']
+        labels:
+          server: rahyar-stage
+          type: container
